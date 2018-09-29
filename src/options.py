@@ -6,20 +6,22 @@
 
 import argparse
 
-__author__ = 'Pau Riba, Anjan Dutta'
-__email__ = 'priba@cvc.uab.cat, adutta@cvc.uab.cat'
+__author__ = 'Pau Riba'
+__email__ = 'priba@cvc.uab.cat'
 
 
 class Options():
 
     def __init__(self):
         # MODEL SETTINGS
-        parser = argparse.ArgumentParser(description='Train a Graph Neural Network for Layout Analysis', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+        parser = argparse.ArgumentParser(description='Train a Metric Learning Graph Neural Network', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         # Positional arguments
+        parser.add_argument('dataset', type=str, choices=['letters'], help='Dataset.')
         parser.add_argument('data_path', type=str, help='Dataset root path.')
         # Model parameters
-        parser.add_argument('--nlayers', type=int, default=3, help='Number of layers.')
+        parser.add_argument('--batch_size', '-bz', type=int, default=32, help='Batch Size.')
         parser.add_argument('--dropout', type=float, default=0.5, help='Dropout.')
+        parser.add_argument('--triplet', action='store_true', help='Triplet flag.')
         # Optimization options
         parser.add_argument('--epochs', '-e', type=int, default=1000, help='Number of epochs to train.')
         parser.add_argument('--learning_rate', '-lr', type=float, default=1e-3, help='The Learning Rate.')
@@ -33,7 +35,7 @@ class Options():
         parser.add_argument('--save', '-s', type=str, default=None, help='Folder to save checkpoints.')
         parser.add_argument('--load', '-l', type=str, default=None, help='Checkpoint path to resume / test.')
         parser.add_argument('--test', '-t', action='store_true', help='Test only flag.')
-        parser.add_argument('--early_stop', '-es', type=int, default=0, help='Early stopping epochs.')
+        parser.add_argument('--early_stop', '-es', type=int, default=20, help='Early stopping epochs.')
         # Acceleration
         parser.add_argument('--ngpu', type=int, default=1, help='0 = CPU, 1 = CUDA, 1 < DataParallel')
         parser.add_argument('--prefetch', type=int, default=2, help='Pre-fetching threads.')

@@ -16,7 +16,7 @@ import os
 # Own modules
 from options import Options
 from Logger import LogMetric
-from utils import save_checkpoint, load_checkpoint, accuracy
+from utils import save_checkpoint, load_checkpoint
 from models import models
 from test import test
 from data.load_data import load_data
@@ -70,7 +70,7 @@ def train(data_loader, net, optimizer, cuda, criterion, epoch):
 
 def main():
     print('Prepare data')
-    train_loader, valid_loader, test_loader = load_data(args.data_path, batch_size=args.batch_size, num_workers=args.prefetch, pin_memory=True)
+    train_loader, valid_loader, test_loader = load_data(args.dataset, args.data_path, batch_size=args.batch_size, num_workers=args.prefetch, pin_memory=True)
 
     print('Create model')
     net = models.GNN(7, 5) 
@@ -165,5 +165,5 @@ if __name__ == '__main__':
         print('Log dir:\t' + log_dir)
         logger = LogMetric.Logger(log_dir, force=True)
 
-    #main()
+    main()
 

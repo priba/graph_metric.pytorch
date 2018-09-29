@@ -12,18 +12,17 @@ import glob
 import numpy as np
 import time
 import os
-import matplotlib.pyplot as plt
 
 # Own modules
 from options import Options
 from Logger import LogMetric
-from utils import load_checkpoint, accuracy
+from utils import load_checkpoint
 from models import models
 
-__author__ = "Pau Riba, Anjan Dutta"
-__email__ = "priba@cvc.uab.cat, adutta@cvc.uab.cat"
+__author__ = "Pau Riba"
+__email__ = "priba@cvc.uab.cat"
 
-def test(data_loader, net, cuda, criterion, evaluation, plot_data=False):
+def test(data_loader, net, cuda, criterion, evaluation):
     batch_time = LogMetric.AverageMeter()
     losses = LogMetric.AverageMeter()
     acc = LogMetric.AverageMeter()
@@ -32,10 +31,7 @@ def test(data_loader, net, cuda, criterion, evaluation, plot_data=False):
     net.eval()
 
     end = time.time()
-
-    emb = None
-    emb_pred = None
-    emb_real = None
+    
     with torch.no_grad():
         for i, (nodes, edges, target) in enumerate(data_loader):
             # Prepare input data

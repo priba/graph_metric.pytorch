@@ -1,5 +1,5 @@
 import torch.nn as nn
-from layers import GConv
+from .layers import GConv
 
 class GNN(nn.Module):
     def __init__(self, in_feat, nclass, dropout=True):
