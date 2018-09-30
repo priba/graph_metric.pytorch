@@ -4,18 +4,19 @@ import torch.utils.data as data
 import xml.etree.ElementTree as ET
 import numpy as np
 from . import data_utils as du
+import os
 import itertools
 
 __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
 
 
-class LettersSiamese(data.Dataset):
+class Letters(data.Dataset):
     def __init__(self, root_path, file_list):
         self.root = root_path
         self.file_list = file_list
 
-        self.graphs, self.labels = getFileList(self.root + self.file_list)
+        self.graphs, self.labels = getFileList(os.path.join(self.root, self.file_list))
 
         self.unique_labels = np.unique(self.labels)
         self.labels = [np.where(target == self.unique_labels)[0][0] for target in self.labels]
@@ -31,13 +32,13 @@ class LettersSiamese(data.Dataset):
         ind = self.pairs[index]
 
         # Graph 1
-        node_labels1, am1 = create_graph_letter(self.root + self.graphs[ind[0]], representation=self.representation)
+        node_labels1, am1 = create_graph_letter(os.path.join(self.root, self.graphs[ind[0]]))
         target1 = self.labels[ind[0]]
         node_labels1 = torch.FloatTensor(node_labels1)
         am1 = torch.FloatTensor(am1)
 
         # Graph 2
-        node_labels2, am2 = create_graph_letter(self.root + self.graphs[ind[1]], representation=self.representation)
+        node_labels2, am2 = create_graph_letter(os.path.join(self.root, self.graphs[ind[1]]))
         target2 = self.labels[ind[1]]
         node_labels2 = torch.FloatTensor(node_labels2)
         am2 = torch.FloatTensor(am2)
@@ -69,7 +70,7 @@ def getFileList(file_path):
     return elements, classes
 
 
-def create_graph_letter(file, representation='adj'):
+def create_graph_letter(file):
 
     tree_gxl = ET.parse(file)
     root_gxl = tree_gxl.getroot()
@@ -87,17 +88,14 @@ def create_graph_letter(file, representation='adj'):
     node_label = np.array(node_label)
     node_id = np.array(node_id)
 
-    if representation=='adj':
-        am = np.zeros((len(node_id), len(node_id), 1))
-    else:
-        am = np.zeros((len(node_id), len(node_id), 2))
+    am = np.zeros((len(node_id), len(node_id)))
 
     for edge in root_gxl.iter('edge'):
         s = np.where(np.array(node_id)==edge.get('from'))[0][0]
         t = np.where(np.array(node_id)==edge.get('to'))[0][0]
 
-        am[s,t,:] = 1
-        am[t,s,:] = 1
+        am[s,t] = 1
+        am[t,s] = 1
 
     return node_label, am
 

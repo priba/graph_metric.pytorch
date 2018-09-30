@@ -23,8 +23,7 @@ def load_data(dataset, data_path, batch_size=32, num_workers=4, pin_memory=True)
 
 
 def load_letters(data_path, representation='adj'):
-    from . import Letters
-    import pdb; pdb.set_trace()
+    from .Letters import Letters
     # Get data for train, validation and test
     data_train = Letters(data_path, 'train.cxl')
     data_valid = Letters(data_path, 'validation.cxl')
