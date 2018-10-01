@@ -38,7 +38,6 @@ class Options():
         parser.add_argument('--early_stop', '-es', type=int, default=20, help='Early stopping epochs.')
         # Acceleration
         parser.add_argument('--ngpu', type=int, default=1, help='0 = CPU, 1 = CUDA, 1 < DataParallel')
-        parser.add_argument('--prefetch', type=int, default=2, help='Pre-fetching threads.')
         # i/o
         parser.add_argument('--log', type=str, default=None, help='Log folder.')
         parser.add_argument('--log-interval', type=int, default=0, metavar='N',

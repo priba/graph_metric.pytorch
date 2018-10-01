@@ -12,49 +12,42 @@ __email__ = "priba@cvc.uab.cat"
 
 
 class Letters(data.Dataset):
-    def __init__(self, root_path, file_list):
+    def __init__(self, root_path, file_list, triplet):
         self.root = root_path
         self.file_list = file_list
-
+        self.triplet = triplet
         self.graphs, self.labels = getFileList(os.path.join(self.root, self.file_list))
 
         self.unique_labels = np.unique(self.labels)
         self.labels = [np.where(target == self.unique_labels)[0][0] for target in self.labels]
+        if self.triplet:
+            # Triplet (anchor, positive, negative)
+            self.groups = [ (i, j) for i in range(len(self.labels)) for j in np.where(self.labels[i] == self.labels)[0] if i != j ]
+        else:
+            # Siamese all pairs
+            self.groups = list(itertools.permutations(range(len(self.labels)), 2))
 
-        self.pairs = list(itertools.permutations(range(len(self.labels)), 2))
-
-        pair_label = np.array([self.labels[p[0]]==self.labels[p[1]] for p in self.pairs])
-        self.weight = np.zeros(len(pair_label))
-        self.weight[pair_label] = 1.0/pair_label.sum()
-        self.weight[np.invert(pair_label)] = 1.0/np.invert(pair_label).sum()
 
     def __getitem__(self, index):
-        ind = self.pairs[index]
+        ind = self.groups[index]
 
         # Graph 1
         node_labels1, am1 = create_graph_letter(os.path.join(self.root, self.graphs[ind[0]]))
         target1 = self.labels[ind[0]]
-        node_labels1 = torch.FloatTensor(node_labels1)
-        am1 = torch.FloatTensor(am1)
-
+        
         # Graph 2
         node_labels2, am2 = create_graph_letter(os.path.join(self.root, self.graphs[ind[1]]))
         target2 = self.labels[ind[1]]
-        node_labels2 = torch.FloatTensor(node_labels2)
-        am2 = torch.FloatTensor(am2)
-
+        if self.triplet:
+            neg_ind = np.random.choice(np.where(self.labels!=target1)[0], 1)
+            # Graph 3
+            node_labels3, am3 = create_graph_letter(os.path.join(self.root, self.graphs[neg_ind[0]]))
+            return (node_labels1, am1), (node_labels2, am2), (node_labels3, am3), torch.Tensor([])
         target = torch.FloatTensor([1.0]) if target1 == target2 else torch.FloatTensor([0.0])
-
-        return node_labels1, am1, node_labels2, am2, target
+        return (node_labels1, am1), (node_labels2, am2), torch.Tensor([]), target
 
     def __len__(self):
-        return len(self.pairs)
-
-    def getTargetSize(self):
-        return len(self.unique_labels)
-
-    def getWeights(self):
-        return self.weight
+        return len(self.groups)
 
 
 def getFileList(file_path):
@@ -88,14 +81,21 @@ def create_graph_letter(file):
     node_label = np.array(node_label)
     node_id = np.array(node_id)
 
-    am = np.zeros((len(node_id), len(node_id)))
-
+    row = np.array([])
+    col = np.array([])
     for edge in root_gxl.iter('edge'):
         s = np.where(np.array(node_id)==edge.get('from'))[0][0]
         t = np.where(np.array(node_id)==edge.get('to'))[0][0]
 
-        am[s,t] = 1
-        am[t,s] = 1
+        row = np.append(row, s)
+        col = np.append(col,t)
+
+        row = np.append(row, t)
+        col = np.append(col,s)
+    
+    data = np.ones(row.shape)
+
+    am = (row, col, data)
 
     return node_label, am
 

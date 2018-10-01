@@ -43,7 +43,8 @@ def train(data_loader, net, optimizer, cuda, criterion, epoch):
     net.train()
 
     end = time.time()
-    for i, (nodes, edges, target) in enumerate(data_loader):
+    for i, (g1, g2, g3, target) in enumerate(data_loader):
+        import pdb; pdb.set_trace()
         # Prepare input data
         if cuda:
             nodes, edges, target = nodes.cuda(), edges.cuda(), target.cuda()
@@ -70,7 +71,7 @@ def train(data_loader, net, optimizer, cuda, criterion, epoch):
 
 def main():
     print('Prepare data')
-    train_loader, valid_loader, test_loader = load_data(args.dataset, args.data_path, batch_size=args.batch_size, num_workers=args.prefetch, pin_memory=True)
+    train_loader, valid_loader, test_loader = load_data(args.dataset, args.data_path, triplet=args.triplet, batch_size=args.batch_size)
 
     print('Create model')
     net = models.GNN(7, 5) 
