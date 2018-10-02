@@ -112,14 +112,14 @@ def collate_fn_multiple_size_siamese(batch):
             data3.append(batch[i][2][1][2])
             offset3 += g_size3[i]
 
-    nl1 = np.concatenate(nl1, axis=0)
+    nl1 = torch.FloatTensor(np.concatenate(nl1, axis=0))
     row1 = np.concatenate(row1, axis=0)
     col1 = np.concatenate(col1, axis=0)
     data1 = np.concatenate(data1, axis=0)
     am1 = coo_matrix((data1, (row1, col1)), shape=(g_size1.sum(), g_size1.sum()) )
     am1 = du.sparse_mx_to_torch_sparse_tensor(am1)
     
-    nl2 = np.concatenate(nl2, axis=0)
+    nl2 = torch.FloatTensor(np.concatenate(nl2, axis=0))
     row2 = np.concatenate(row2, axis=0)
     col2 = np.concatenate(col2, axis=0)
     data2 = np.concatenate(data2, axis=0)
@@ -127,7 +127,7 @@ def collate_fn_multiple_size_siamese(batch):
     am2 = du.sparse_mx_to_torch_sparse_tensor(am2)
     
     if triplet:
-        nl3 = np.concatenate(nl3, axis=0)
+        nl3 = torch.FloatTensor(np.concatenate(nl3, axis=0))
         row3 = np.concatenate(row3, axis=0)
         col3 = np.concatenate(col3, axis=0)
         data3 = np.concatenate(data3, axis=0)

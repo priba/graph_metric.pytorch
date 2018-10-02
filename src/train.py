@@ -34,6 +34,9 @@ def adjust_learning_rate(optimizer, epoch):
         for param_group in optimizer.param_groups:
             param_group['lr'] = args.learning_rate
 
+def graph_cuda(g):
+    g = tuple((gi.cuda() for gi in g) )
+    return g
 
 def train(data_loader, net, optimizer, cuda, criterion, epoch):
     batch_time = LogMetric.AverageMeter()
@@ -44,15 +47,22 @@ def train(data_loader, net, optimizer, cuda, criterion, epoch):
 
     end = time.time()
     for i, (g1, g2, g3, target) in enumerate(data_loader):
-        import pdb; pdb.set_trace()
         # Prepare input data
         if cuda:
-            nodes, edges, target = nodes.cuda(), edges.cuda(), target.cuda()
+            g1, g2 = graph_cuda(g1), graph_cuda(g2)
+            if args.triplet:
+                g3 = graph_cuda(g3)
+            else:
+                target = target.cuda()
         
         optimizer.zero_grad()
         
         # Output
-        out = net(nodes, edges)
+        g1_out = net(g1)
+        g2_out = net(g2)
+
+        if args.triplet:
+            g3_out = net(g3)
 
         loss = criterion(out, target)
         
