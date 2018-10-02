@@ -64,6 +64,7 @@ def train(data_loader, net, optimizer, cuda, criterion, epoch):
         if args.triplet:
             g3_out = net(g3)
 
+        import pdb; pdb.set_trace()
         loss = criterion(out, target)
         
         # Gradiensts and update
@@ -84,7 +85,7 @@ def main():
     train_loader, valid_loader, test_loader = load_data(args.dataset, args.data_path, triplet=args.triplet, batch_size=args.batch_size)
 
     print('Create model')
-    net = models.GNN(7, 5) 
+    net = models.GNN(2, 64) 
 
     print('Loss & Optimizer')
     criterion = torch.nn.CrossEntropyLoss()

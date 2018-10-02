@@ -24,7 +24,7 @@ class GConv(nn.Module):
     
     def forward(self, x, W):
 
-        output = torch.spmm(adj, support)
+        output = torch.spmm(W, x)
         output = self.fc(output)
 
         if self.bn_bool:
