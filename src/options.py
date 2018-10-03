@@ -22,6 +22,8 @@ class Options():
         parser.add_argument('--batch_size', '-bz', type=int, default=32, help='Batch Size.')
         parser.add_argument('--dropout', type=float, default=0.5, help='Dropout.')
         parser.add_argument('--triplet', action='store_true', help='Triplet flag.')
+        parser.add_argument('--swap', action='store_true', help='Swap in the triplet loss.')
+        parser.add_argument('--margin', type=float, default=1, help='Margin in the loss function.')
         # Optimization options
         parser.add_argument('--epochs', '-e', type=int, default=1000, help='Number of epochs to train.')
         parser.add_argument('--learning_rate', '-lr', type=float, default=1e-3, help='The Learning Rate.')
@@ -40,7 +42,7 @@ class Options():
         parser.add_argument('--ngpu', type=int, default=1, help='0 = CPU, 1 = CUDA, 1 < DataParallel')
         # i/o
         parser.add_argument('--log', type=str, default=None, help='Log folder.')
-        parser.add_argument('--log-interval', type=int, default=0, metavar='N',
+        parser.add_argument('--log-interval', type=int, default=250, metavar='N',
                             help='How many batches to wait before logging training status')
         self.parser = parser
 

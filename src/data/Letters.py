@@ -43,7 +43,7 @@ class Letters(data.Dataset):
             # Graph 3
             node_labels3, am3 = create_graph_letter(os.path.join(self.root, self.graphs[neg_ind[0]]))
             return (node_labels1, am1), (node_labels2, am2), (node_labels3, am3), torch.Tensor([])
-        target = torch.FloatTensor([1.0]) if target1 == target2 else torch.FloatTensor([0.0])
+        target = torch.FloatTensor([0.0]) if target1 == target2 else torch.FloatTensor([1.0])
         return (node_labels1, am1), (node_labels2, am2), torch.Tensor([]), target
 
     def __len__(self):

@@ -19,7 +19,7 @@ __email__ = "priba@cvc.uab.cat"
 def load_data(dataset, data_path, triplet=False, batch_size=32):
     if dataset == 'letters':
         data_train, data_valid, data_test = load_letters(data_path, triplet)
-        train_loader = DataLoader(data_train, batch_size=batch_size, collate_fn=collate_fn_multiple_size_siamese)
+        train_loader = DataLoader(data_train, batch_size=batch_size, collate_fn=collate_fn_multiple_size_siamese, shuffle=True)
         valid_loader = DataLoader(data_train, batch_size=batch_size, collate_fn=collate_fn_multiple_size_siamese)
         test_loader = DataLoader(data_train, batch_size=batch_size, collate_fn=collate_fn_multiple_size_siamese)
         return train_loader, valid_loader, test_loader

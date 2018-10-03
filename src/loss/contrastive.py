@@ -9,7 +9,8 @@ Based on: https://github.com/delijati/pytorch-siamese/blob/master/contrastive.py
 
 import torch
 import torch.nn as nn
-import .distance
+from .distance import SoftHd
+
 __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
 
@@ -20,13 +21,13 @@ class ContrastiveLoss(nn.Module):
         super(ContrastiveLoss, self).__init__()
         self.margin = margin
         self.reduction = reduction
+        self.distance = SoftHd()
 
     def forward(self, g1, g2, y):
-        d = dist(g1, g2)
+        d = self.distance(g1, g2)
 
         md = self.margin - d
         md = torch.clamp(md, min=0.0)
-
         loss = y * md + (1 - y) * d
         
         if self.reduction == 'none':
@@ -45,19 +46,20 @@ class ContrastiveLoss(nn.Module):
 class TripletLoss(nn.Module):
 
     def __init__(self, margin=1.0, swap=False, reduction='elementwise_mean'):
-        super(TripletMarginLoss, self).__init__()
+        super(TripletLoss, self).__init__()
         self.margin = margin
         self.swap = swap
         self.reduction = reduction
+        self.distance = SoftHd()
 
     def forward(self, anc, pos, neg):
-        d_pos = dist(anc, pos)
-        d_neg = dist(anc, neg)
-        if self.swap.
-            d_neg_aux = dist(pos, neg)
-            d_neg = torch.max(d_neg, d_neg_aux)
+        d_pos = self.distance(anc, pos)
+        d_neg = self.distance(anc, neg)
+        if self.swap:
+            d_neg_aux = self.distance(pos, neg)
+            d_neg = torch.min(d_neg, d_neg_aux)
 
-        loss = torch.max(0, d_pos-d_neg+self.margin)
+        loss = torch.clamp(d_pos-d_neg+self.margin, 0.0)
 
         if self.reduction == 'none':
             return loss

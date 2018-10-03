@@ -20,7 +20,7 @@ from utils import save_checkpoint, load_checkpoint
 from models import models
 from test import test
 from data.load_data import load_data
-
+from loss.contrastive import ContrastiveLoss, TripletLoss
 __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
 
@@ -63,18 +63,22 @@ def train(data_loader, net, optimizer, cuda, criterion, epoch):
 
         if args.triplet:
             g3_out = net(g3)
-
-        import pdb; pdb.set_trace()
-        loss = criterion(out, target)
+            loss = criterion(g1_out, g2_out, g3_out)
+        else:
+            loss = criterion(g1_out, g2_out, target)
         
         # Gradiensts and update
         loss.backward()
         optimizer.step()
         
         # Save values
+        losses.update(loss.item(), g1[2].size(0))
         batch_time.update(time.time() - end)
         end = time.time()
 
+        if i > 0 and i%args.log_interval == 0:
+            print('Epoch: [{0}]({1}/{2}) Average Loss {loss.avg:.3f}; Avg Time x Batch {b_time.avg:.3f}'
+                    .format(epoch, i, len(data_loader), loss=losses, b_time=batch_time))
     print('Epoch: [{0}] Average Loss {loss.avg:.3f}; Avg Time x Batch {b_time.avg:.3f}'
             .format(epoch, loss=losses, b_time=batch_time))
     return losses
@@ -88,7 +92,11 @@ def main():
     net = models.GNN(2, 64) 
 
     print('Loss & Optimizer')
-    criterion = torch.nn.CrossEntropyLoss()
+    if args.triplet:
+        criterion = TripletLoss(margin=args.margin, swap=args.swap)
+    else:
+        criterion = ContrastiveLoss(margin=args.margin)
+
     optimizer = torch.optim.SGD(net.parameters(), args.learning_rate, momentum=args.momentum, weight_decay=args.decay, nesterov=True)
 
     print('Check CUDA')
