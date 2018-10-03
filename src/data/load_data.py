@@ -9,7 +9,6 @@ import torch
 import numpy as np
 import glob
 from torch.utils.data import DataLoader
-from scipy.sparse import coo_matrix
 from . import data_utils as du
 
 __author__ = "Pau Riba"
@@ -18,11 +17,14 @@ __email__ = "priba@cvc.uab.cat"
 
 def load_data(dataset, data_path, triplet=False, batch_size=32):
     if dataset == 'letters':
-        data_train, data_valid, data_test = load_letters(data_path, triplet)
-        train_loader = DataLoader(data_train, batch_size=batch_size, collate_fn=collate_fn_multiple_size_siamese, shuffle=True)
-        valid_loader = DataLoader(data_train, batch_size=batch_size, collate_fn=collate_fn_multiple_size_siamese)
-        test_loader = DataLoader(data_train, batch_size=batch_size, collate_fn=collate_fn_multiple_size_siamese)
-        return train_loader, valid_loader, test_loader
+        data_train, data_valid, data_test, gallery = load_letters(data_path, triplet)
+        train_loader = DataLoader(data_train, batch_size=batch_size, collate_fn=du.collate_fn_multiple_size_siamese, shuffle=True)
+
+        # Load same numbers of graphs that are asked in training
+        valid_loader = DataLoader(data_valid, batch_size=1, collate_fn=du.collate_fn_multiple_size)
+        test_loader = DataLoader(data_test, batch_size=1, collate_fn=du.collate_fn_multiple_size)
+        gallery_loader = DataLoader(gallery, batch_size=batch_size, collate_fn=du.collate_fn_multiple_size)
+        return train_loader, valid_loader, test_loader, gallery_loader
     elif dataset == 'histograph':
         sys.exit()
         return load_histograph(data_path)
@@ -30,12 +32,13 @@ def load_data(dataset, data_path, triplet=False, batch_size=32):
 
 
 def load_letters(data_path, triplet=False):
-    from .Letters import Letters
+    from .Letters import Letters_train, Letters
     # Get data for train, validation and test
-    data_train = Letters(data_path, 'train.cxl', triplet)
-    data_valid = Letters(data_path, 'validation.cxl', triplet)
-    data_test = Letters(data_path, 'test.cxl', triplet)
-    return data_train, data_valid, data_test
+    data_train = Letters_train(data_path, 'train.cxl', triplet)
+    data_valid = Letters(data_path, 'validation.cxl')
+    data_test = Letters(data_path, 'test.cxl')
+    gallery = Letters(data_path, 'train.cxl')
+    return data_train, data_valid, data_test, gallery
 
 
 def load_histographi(data_path, representation='adj'):

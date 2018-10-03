@@ -22,34 +22,36 @@ from models import models
 __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
 
-def test(data_loader, net, cuda, criterion, evaluation):
+def test(data_loader, gallery_loader, net, cuda, distance):
     batch_time = LogMetric.AverageMeter()
     losses = LogMetric.AverageMeter()
     acc = LogMetric.AverageMeter()
 
-    # switch to train mode
+    # switch to test mode
     net.eval()
+    distance.eval()
 
     end = time.time()
-    
     with torch.no_grad():
-        for i, (nodes, edges, target) in enumerate(data_loader):
+        for i, (g1, target1) in enumerate(data_loader):
             # Prepare input data
             if cuda:
-                nodes, edges, target = nodes.cuda(), edges.cuda(), target.cuda()
+                g1 = tuple((gi.cuda() for gi in g1) )
+                target1 = target1.cuda()
         
             # Output
-            out  = net(nodes, edges)
+            g1_out  = net(g1)
         
-            loss = criterion(out, target)
-            bacc = evaluation(out, target)
+            for j, (g2, target2) in enumerate(gallery_loader):
+                if cuda:
+                    g2 = tuple((gi.cuda() for gi in g2) )
+                    target2 = target2.cuda()
 
-            # Save values
-            losses.update(loss.data[0], int(nl[:,-1].sum()))
-            acc.update(bacc[0].data[0], int(nl[:,-1].sum()))
-
-            batch_time.update(time.time() - end)
-            end = time.time()
+                # Output
+                g2_out  = net(g2)
+                import pdb; pdb.set_trace()
+                dist = distance(g1_out, g2_out)
+                
 
     print('* Test Average Loss {loss.avg:.3f}; Avg Acc {acc.avg:.3f}; Avg Time x Batch {b_time.avg:.3f}'
             .format(loss=losses, acc=acc, b_time=batch_time))

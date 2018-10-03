@@ -11,7 +11,7 @@ __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
 
 
-class Letters(data.Dataset):
+class Letters_train(data.Dataset):
     def __init__(self, root_path, file_list, triplet):
         self.root = root_path
         self.file_list = file_list
@@ -49,6 +49,25 @@ class Letters(data.Dataset):
     def __len__(self):
         return len(self.groups)
 
+
+class Letters(data.Dataset):
+    def __init__(self, root_path, file_list):
+        self.root = root_path
+        self.file_list = file_list
+        self.graphs, self.labels = getFileList(os.path.join(self.root, self.file_list))
+
+        self.unique_labels = np.unique(self.labels)
+        self.labels = [np.where(target == self.unique_labels)[0][0] for target in self.labels]
+
+    def __getitem__(self, index):
+        # Graph
+        node_labels, am = create_graph_letter(os.path.join(self.root, self.graphs[index]))
+        target = self.labels[index]
+        
+        return (node_labels, am), target
+
+    def __len__(self):
+        return len(self.labels)
 
 def getFileList(file_path):
     elements = []

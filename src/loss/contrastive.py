@@ -42,6 +42,8 @@ class ContrastiveLoss(nn.Module):
         
         raise NameError(self.reduction + ' not implemented!')
 
+    def getDistance(self):
+        return self.distance
 
 class TripletLoss(nn.Module):
 
@@ -73,3 +75,5 @@ class TripletLoss(nn.Module):
         
         raise NameError(self.reduction + ' not implemented!')
 
+    def getDistance(self):
+        return self.distance
