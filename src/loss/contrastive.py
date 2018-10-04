@@ -24,7 +24,7 @@ class ContrastiveLoss(nn.Module):
         self.distance = SoftHd()
 
     def forward(self, g1, g2, y):
-        d = self.distance(g1, g2)
+        d = self.distance(g1, g2, mode='pairs')
 
         md = self.margin - d
         md = torch.clamp(md, min=0.0)
@@ -55,10 +55,10 @@ class TripletLoss(nn.Module):
         self.distance = SoftHd()
 
     def forward(self, anc, pos, neg):
-        d_pos = self.distance(anc, pos)
-        d_neg = self.distance(anc, neg)
+        d_pos = self.distance(anc, pos, mode='pairs')
+        d_neg = self.distance(anc, neg, mode='pairs')
         if self.swap:
-            d_neg_aux = self.distance(pos, neg)
+            d_neg_aux = self.distance(pos, neg, mode='pairs')
             d_neg = torch.min(d_neg, d_neg_aux)
 
         loss = torch.clamp(d_pos-d_neg+self.margin, 0.0)

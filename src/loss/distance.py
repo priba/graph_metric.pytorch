@@ -44,11 +44,14 @@ class SoftHd(nn.Module):
         return d
 
 
-    def forward(self, g1, g2):
+    def forward(self, g1, g2, mode='pairs'):
+        ''' mode:   'pairs' expect paired graphs, same for g1 and g2.
+                    'retrieval' g1 is just one graph and computes the distance against all graphs in g2
+        '''
         x1, _, sz1 = g1
         x2, _, sz2 = g2
 
-        bz = sz1.shape[0] # Batch Size
+        bz = sz2.shape[0] # Batch Size
 
         d = torch.zeros(bz)
         if x1.is_cuda:
@@ -58,6 +61,13 @@ class SoftHd(nn.Module):
         start2 = 0
 
         for i in range(bz):
-            d[i] = self.soft_hausdorff(x1[start1:start1+sz1[i]], x2[start2:start2+sz2[i]])
-        
+            if mode == 'pairs':
+                d[i] = self.soft_hausdorff(x1[start1:start1+sz1[i]], x2[start2:start2+sz2[i]])
+                start1 = start1 + sz1[i]
+            elif mode == 'retrieval':
+                d[i] = self.soft_hausdorff(x1, x2[start2:start2+sz2[i]])
+            else:
+                raise NameError(mode + ' not implemented!')
+            start2 = start2 + sz2[i]
+
         return d

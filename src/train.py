@@ -86,7 +86,7 @@ def train(data_loader, net, optimizer, cuda, criterion, epoch):
 
 def main():
     print('Prepare data')
-    train_loader, valid_loader, test_loader = load_data(args.dataset, args.data_path, triplet=args.triplet, batch_size=args.batch_size)
+    train_loader, valid_loader, test_loader, gallery_loader = load_data(args.dataset, args.data_path, triplet=args.triplet, batch_size=args.batch_size)
 
     print('Create model')
     net = models.GNN(2, 64) 
@@ -126,7 +126,7 @@ def main():
             adjust_learning_rate(optimizer, epoch)
 
             loss_train = train(train_loader, net, optimizer, args.cuda, criterion, epoch)
-            loss_valid, acc_valid, _ = test(valid_loader, net, args.cuda, criterion, evaluation)
+            loss_valid, acc_valid, _ = test(valid_loader, gallery_loader, net, args.cuda, criterion.getDistance())
             
             # Early-Stop + Save model
             if acc_valid.avg > best_acc:
@@ -143,7 +143,6 @@ def main():
             if args.log:
                 # Scalars
                 logger.add_scalar('loss_train', loss_train.avg)
-                logger.add_scalar('loss_valid', loss_valid.avg)
                 logger.add_scalar('acc_valid', acc_valid.avg)
                 logger.add_scalar('learning_rate', args.learning_rate)
                 logger.step()
@@ -157,7 +156,7 @@ def main():
             print('Best model at epoch {epoch} and acc {acc}%'.format(epoch=checkpoint['epoch'],acc=checkpoint['best_acc']))
 
     print('***Test***')
-    test(test_loader, net, args.cuda, criterion, evaluation)
+    test(test_loader, gallery_loader, net, args.cuda, criterion.getDistance())
 
 if __name__ == '__main__':
     # Parse options

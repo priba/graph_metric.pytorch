@@ -18,7 +18,12 @@ __email__ = "priba@cvc.uab.cat"
 def load_data(dataset, data_path, triplet=False, batch_size=32):
     if dataset == 'letters':
         data_train, data_valid, data_test, gallery = load_letters(data_path, triplet)
-        train_loader = DataLoader(data_train, batch_size=batch_size, collate_fn=du.collate_fn_multiple_size_siamese, shuffle=True)
+        train_loader = DataLoader(data_train, batch_size=batch_size, num_workers=0, collate_fn=du.collate_fn_multiple_size_siamese, shuffle=True)
+
+        if triplet:
+            batch_size = 3*batch_size
+        else:
+            batch_size = 2*batch_size
 
         # Load same numbers of graphs that are asked in training
         valid_loader = DataLoader(data_valid, batch_size=1, collate_fn=du.collate_fn_multiple_size)

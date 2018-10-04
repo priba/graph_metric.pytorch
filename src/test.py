@@ -32,6 +32,10 @@ def test(data_loader, gallery_loader, net, cuda, distance):
     distance.eval()
 
     end = time.time()
+
+    dist_matrix = []
+    ind_i = []
+    ind_j = []
     with torch.no_grad():
         for i, (g1, target1) in enumerate(data_loader):
             # Prepare input data
@@ -41,7 +45,9 @@ def test(data_loader, gallery_loader, net, cuda, distance):
         
             # Output
             g1_out  = net(g1)
-        
+            
+            ind_j_aux = []
+            dist_j = []
             for j, (g2, target2) in enumerate(gallery_loader):
                 if cuda:
                     g2 = tuple((gi.cuda() for gi in g2) )
@@ -49,9 +55,19 @@ def test(data_loader, gallery_loader, net, cuda, distance):
 
                 # Output
                 g2_out  = net(g2)
-                import pdb; pdb.set_trace()
-                dist = distance(g1_out, g2_out)
-                
+
+                # Batch size
+                bz = target2.shape[0]
+                g = (g1_out[0].repeat(bz,1))
+                d = distance(g1_out, g2_out, mode='retrieval')
+              
+                dist_j.append(d)
+                ind_j_aux.append(target2)
+
+            dist_matrix.append(torch.cat(dist_i))
+            ind_i.append(target1)
+            ind_j.append(torch.cat(ind_j_aux))
+        import pdb; pdb.set_trace()
 
     print('* Test Average Loss {loss.avg:.3f}; Avg Acc {acc.avg:.3f}; Avg Time x Batch {b_time.avg:.3f}'
             .format(loss=losses, acc=acc, b_time=batch_time))
