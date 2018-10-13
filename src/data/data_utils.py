@@ -14,19 +14,6 @@ __author__ = 'Pau Riba'
 __email__ = 'priba@cvc.uab.cat'
 
 
-def sparse_mx_to_torch_sparse_tensor(sparse_mx):
-    """Convert a scipy sparse matrix to a torch sparse tensor.
-    From: https://github.com/tkipf/pygcn/blob/master/pygcn/utils.py
-    """
-    import torch
-    sparse_mx = sparse_mx.tocoo().astype(np.float32)
-    indices = torch.from_numpy(
-        np.vstack((sparse_mx.row, sparse_mx.col)).astype(np.int64))
-    values = torch.from_numpy(sparse_mx.data)
-    shape = torch.Size(sparse_mx.shape)
-    return torch.sparse.FloatTensor(indices, values, shape)
-
-
 def collate_fn_multiple_size(batch):
     # Batch is a list where each element
     #   * Nodes (VxF)
@@ -51,13 +38,15 @@ def collate_fn_multiple_size(batch):
         offset += g_size[i]
 
     nl = torch.FloatTensor(np.concatenate(nl, axis=0))
-    row = np.concatenate(row, axis=0)
-    col = np.concatenate(col, axis=0)
-    data = np.concatenate(data, axis=0)
-    am = coo_matrix((data, (row, col)), shape=(g_size.sum(), g_size.sum()) )
-    am = du.sparse_mx_to_torch_sparse_tensor(am)
+    row = torch.LongTensor(np.concatenate(row, axis=0))
+    col = torch.LongTensor(np.concatenate(col, axis=0))
+    if len(row)==0:
+        indices = row
+    else:
+        indices = torch.stack((row, col), dim=0)
+    data = torch.FloatTensor(np.concatenate(data, axis=0))
     
-    return (nl, am, g_size), targets
+    return (nl, indices, data, g_size), targets
 
 
 def collate_fn_multiple_size_siamese(batch):
@@ -128,28 +117,25 @@ def collate_fn_multiple_size_siamese(batch):
             offset3 += g_size3[i]
 
     nl1 = torch.FloatTensor(np.concatenate(nl1, axis=0))
-    row1 = np.concatenate(row1, axis=0)
-    col1 = np.concatenate(col1, axis=0)
-    data1 = np.concatenate(data1, axis=0)
-    am1 = coo_matrix((data1, (row1, col1)), shape=(g_size1.sum(), g_size1.sum()) )
-    am1 = du.sparse_mx_to_torch_sparse_tensor(am1)
+    row1 = torch.LongTensor(np.concatenate(row1, axis=0))
+    col1 = torch.LongTensor(np.concatenate(col1, axis=0))
+    indices1 = torch.stack((row1, col1), dim=0)
+    data1 = torch.FloatTensor(np.concatenate(data1, axis=0))
     
     nl2 = torch.FloatTensor(np.concatenate(nl2, axis=0))
-    row2 = np.concatenate(row2, axis=0)
-    col2 = np.concatenate(col2, axis=0)
-    data2 = np.concatenate(data2, axis=0)
-    am2 = coo_matrix((data2, (row2, col2)), shape=(g_size2.sum(), g_size2.sum()) )
-    am2 = du.sparse_mx_to_torch_sparse_tensor(am2)
+    row2 = torch.LongTensor(np.concatenate(row2, axis=0))
+    col2 = torch.LongTensor(np.concatenate(col2, axis=0))
+    indices2 = torch.stack((row2, col2), dim=0)
+    data2 = torch.FloatTensor(np.concatenate(data2, axis=0))
     
     if triplet:
         nl3 = torch.FloatTensor(np.concatenate(nl3, axis=0))
-        row3 = np.concatenate(row3, axis=0)
-        col3 = np.concatenate(col3, axis=0)
-        data3 = np.concatenate(data3, axis=0)
-        am3 = coo_matrix((data3, (row3, col3)), shape=(g_size3.sum(), g_size3.sum()) )
-        am3 = du.sparse_mx_to_torch_sparse_tensor(am3)
+        row3 = torch.LongTensor(np.concatenate(row3, axis=0))
+        col3 = torch.LongTensor(np.concatenate(col3, axis=0))
+        indices3 = torch.stack((row3, col3), dim=0)
+        data3 = torch.FloatTensor(np.concatenate(data3, axis=0))
     
-        return (nl1, am1, g_size1), (nl2, am2, g_size2), (nl3, am3, g_size3), targets
-    return (nl1, am1, g_size1), (nl2, am2, g_size2), None, targets
+        return (nl1, indices1, data1, g_size1), (nl2, indices2, data2, g_size2), (nl3, indices3, data3, g_size3), targets
+    return (nl1, indices1, data1, g_size1), (nl2, indices2, data2, g_size2), None, targets
 
 

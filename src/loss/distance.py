@@ -16,7 +16,7 @@ class SoftHd(nn.Module):
 
 
     def cdist(self, set1, set2):
-        ''' Pairwise Distance between tow matrices
+        ''' Pairwise Distance between two matrices
         Input:  x is a Nxd matrix
                 y is an optional Mxd matirx
         Output: dist is a NxM matrix where dist[i,j] is the square norm between x[i,:] and y[j,:]
@@ -59,7 +59,6 @@ class SoftHd(nn.Module):
 
         start1 = 0
         start2 = 0
-
         for i in range(bz):
             if mode == 'pairs':
                 d[i] = self.soft_hausdorff(x1[start1:start1+sz1[i]], x2[start2:start2+sz2[i]])

@@ -14,6 +14,23 @@ __author__ = 'Pau Riba'
 __email__ = 'priba@cvc.uab.cat'
 
 
+def graph_to_sparse(g):
+    g_out = ( g[0],
+              torch.sparse.FloatTensor(g[1], g[2], (g[0].shape[0], g[0].shape[0])),
+              g[3]
+            )
+    return g_out
+
+
+def graph_cuda(g):
+    """ Graph is represented as
+    g (nodes, indices, data, target)
+    output (nodes, am [sparse], target)
+    """
+    g = tuple((gi.cuda() for gi in g) )
+    return g
+
+
 def save_checkpoint(state, directory, file_name):
 
     if not os.path.isdir(directory):

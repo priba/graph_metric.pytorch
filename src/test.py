@@ -16,7 +16,7 @@ import os
 # Own modules
 from options import Options
 from Logger import LogMetric
-from utils import load_checkpoint
+from utils import load_checkpoint, graph_cuda, graph_to_sparse
 from models import models
 
 __author__ = "Pau Riba"
@@ -38,9 +38,10 @@ def test(data_loader, gallery_loader, net, cuda, distance):
     ind_j = []
     with torch.no_grad():
         for i, (g1, target1) in enumerate(data_loader):
+            g1 = graph_to_sparse(g1)
             # Prepare input data
             if cuda:
-                g1 = tuple((gi.cuda() for gi in g1) )
+                g1 = graph_cuda(g1)
                 target1 = target1.cuda()
         
             # Output
@@ -49,8 +50,9 @@ def test(data_loader, gallery_loader, net, cuda, distance):
             ind_j_aux = []
             dist_j = []
             for j, (g2, target2) in enumerate(gallery_loader):
+                g2 = graph_to_sparse(g2)
                 if cuda:
-                    g2 = tuple((gi.cuda() for gi in g2) )
+                    g2 = graph_cuda(g2)
                     target2 = target2.cuda()
 
                 # Output
@@ -64,10 +66,9 @@ def test(data_loader, gallery_loader, net, cuda, distance):
                 dist_j.append(d)
                 ind_j_aux.append(target2)
 
-            dist_matrix.append(torch.cat(dist_i))
+            dist_matrix.append(torch.cat(dist_j))
             ind_i.append(target1)
             ind_j.append(torch.cat(ind_j_aux))
-        import pdb; pdb.set_trace()
 
     print('* Test Average Loss {loss.avg:.3f}; Avg Acc {acc.avg:.3f}; Avg Time x Batch {b_time.avg:.3f}'
             .format(loss=losses, acc=acc, b_time=batch_time))
@@ -76,7 +77,7 @@ def test(data_loader, gallery_loader, net, cuda, distance):
 
 def main():
     print('Prepare data')
-    train_loader, valid_loader, test_loader = load_data(args.data_path, batch_size=args.batch_size, num_workers=args.prefetch, pin_memory=True)
+    train_loader, valid_loader, test_loader = load_data(args.data_path, batch_size=args.batch_size, prefetch=args.prefetch)
     
     print('Create model')
     net = None

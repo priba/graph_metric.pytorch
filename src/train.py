@@ -7,7 +7,6 @@ from __future__ import print_function, division
 
 # Python modules
 import torch
-from torch.autograd.variable import Variable
 import glob
 import numpy as np
 import time
@@ -16,7 +15,7 @@ import os
 # Own modules
 from options import Options
 from Logger import LogMetric
-from utils import save_checkpoint, load_checkpoint
+from utils import save_checkpoint, load_checkpoint, graph_cuda, graph_to_sparse
 from models import models
 from test import test
 from data.load_data import load_data
@@ -34,9 +33,6 @@ def adjust_learning_rate(optimizer, epoch):
         for param_group in optimizer.param_groups:
             param_group['lr'] = args.learning_rate
 
-def graph_cuda(g):
-    g = tuple((gi.cuda() for gi in g) )
-    return g
 
 def train(data_loader, net, optimizer, cuda, criterion, epoch):
     batch_time = LogMetric.AverageMeter()
@@ -47,6 +43,9 @@ def train(data_loader, net, optimizer, cuda, criterion, epoch):
 
     end = time.time()
     for i, (g1, g2, g3, target) in enumerate(data_loader):
+        g1, g2 = graph_to_sparse(g1), graph_to_sparse(g2)
+        if args.triplet:
+            g3 = graph_to_sparse(g3)
         # Prepare input data
         if cuda:
             g1, g2 = graph_cuda(g1), graph_cuda(g2)
@@ -86,7 +85,7 @@ def train(data_loader, net, optimizer, cuda, criterion, epoch):
 
 def main():
     print('Prepare data')
-    train_loader, valid_loader, test_loader, gallery_loader = load_data(args.dataset, args.data_path, triplet=args.triplet, batch_size=args.batch_size)
+    train_loader, valid_loader, test_loader, gallery_loader = load_data(args.dataset, args.data_path, triplet=args.triplet, batch_size=args.batch_size, prefetch=args.prefetch)
 
     print('Create model')
     net = models.GNN(2, 64) 
@@ -126,7 +125,7 @@ def main():
             adjust_learning_rate(optimizer, epoch)
 
             loss_train = train(train_loader, net, optimizer, args.cuda, criterion, epoch)
-            loss_valid, acc_valid, _ = test(valid_loader, gallery_loader, net, args.cuda, criterion.getDistance())
+            loss_valid, acc_valid = test(valid_loader, gallery_loader, net, args.cuda, criterion.getDistance())
             
             # Early-Stop + Save model
             if acc_valid.avg > best_acc:

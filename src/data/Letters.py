@@ -114,7 +114,7 @@ def create_graph_letter(file):
     
     data = np.ones(row.shape)
 
-    am = (row, col, data)
+    am = row, col, data
 
     return node_label, am
 

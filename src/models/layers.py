@@ -23,8 +23,12 @@ class GConv(nn.Module):
 
     
     def forward(self, x, W):
-
-        output = torch.spmm(W, x)
+        if W._nnz()==0:
+            output = torch.zeros(x.shape)
+            if x.is_cuda:
+                output = output.cuda()
+        else:
+            output = torch.spmm(W, x)
         output = self.fc(output)
 
         if self.bn_bool:
