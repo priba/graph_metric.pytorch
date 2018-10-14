@@ -24,8 +24,8 @@ __email__ = "priba@cvc.uab.cat"
 
 def test(data_loader, gallery_loader, net, cuda, distance):
     batch_time = LogMetric.AverageMeter()
-    losses = LogMetric.AverageMeter()
     acc = LogMetric.AverageMeter()
+    meanap = LogMetric.AverageMeter()
 
     # switch to test mode
     net.eval()
@@ -34,45 +34,67 @@ def test(data_loader, gallery_loader, net, cuda, distance):
     end = time.time()
 
     dist_matrix = []
-    ind_i = []
-    ind_j = []
+    start = time.time()
     with torch.no_grad():
-        for i, (g1, target1) in enumerate(data_loader):
-            g1 = graph_to_sparse(g1)
+        g_gallery = []
+        target_gallery = []
+        for j, (g, target) in enumerate(gallery_loader):
+            g = graph_to_sparse(g)
+            if cuda:
+                g = graph_cuda(g)
+                target = target.cuda()
+
+            # Output
+            g_out  = net(g)
+
+            target_gallery.append(target)
+            g_gallery.append(g_out)
+
+        target_gallery = torch.cat(target_gallery)
+        g_gallery = graph_cat(g_gallery)
+
+        target_query = []
+        for i, (g, target) in enumerate(data_loader):
+            g = graph_to_sparse(g)
             # Prepare input data
             if cuda:
-                g1 = graph_cuda(g1)
-                target1 = target1.cuda()
+                g = graph_cuda(g)
+                target = target.cuda()
         
             # Output
-            g1_out  = net(g1)
+            g_out  = net(g)
+            d = distance(g_out, g_gallery, mode='retrieval')
             
-            ind_j_aux = []
-            dist_j = []
-            for j, (g2, target2) in enumerate(gallery_loader):
-                g2 = graph_to_sparse(g2)
-                if cuda:
-                    g2 = graph_cuda(g2)
-                    target2 = target2.cuda()
+            dist_matrix.append(d)
+            target_query.append(target)
 
-                # Output
-                g2_out  = net(g2)
+        dist_matrix = torch.stack(dist_matrix)
+        target_query = torch.cat(target_query)
+    batch_time.update(time.time()-start)
+    print('* Test Acc {acc.avg:.3f}; mAP {meanap.avg: .3f}; Time x Test {b_time.avg:.3f}'
+            .format(acc=acc, meanap=meanap, b_time=batch_time))
+    return acc, meanap
 
-                # Batch size
-                bz = target2.shape[0]
-                g = (g1_out[0].repeat(bz,1))
-                d = distance(g1_out, g2_out, mode='retrieval')
-              
-                dist_j.append(d)
-                ind_j_aux.append(target2)
 
-            dist_matrix.append(torch.cat(dist_j))
-            ind_i.append(target1)
-            ind_j.append(torch.cat(ind_j_aux))
-
-    print('* Test Average Loss {loss.avg:.3f}; Avg Acc {acc.avg:.3f}; Avg Time x Batch {b_time.avg:.3f}'
-            .format(loss=losses, acc=acc, b_time=batch_time))
-    return losses, acc
+def graph_cat(g):
+    nodes = []
+    indices = []
+    data = []
+    g_size = []
+    offset = 0
+    for gi in g:
+        nodes.append(gi[0])
+        indices.append(gi[1]._indices()+offset)
+        data.append(gi[1]._values())
+        g_size.append(gi[2])
+        offset = offset + gi[0].size(0)
+    g_out = (
+            torch.cat(nodes),
+            torch.cat(indices, dim=1),
+            torch.cat(data),
+            torch.cat(g_size)
+            )
+    return graph_to_sparse(g_out)
 
 
 def main():
