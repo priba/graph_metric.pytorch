@@ -125,7 +125,7 @@ def main():
             adjust_learning_rate(optimizer, epoch)
 
             loss_train = train(train_loader, net, optimizer, args.cuda, criterion, epoch)
-            loss_valid, acc_valid = test(valid_loader, gallery_loader, net, args.cuda, criterion.getDistance())
+            acc_valid, map_valid = test(valid_loader, gallery_loader, net, args.cuda, criterion.getDistance())
             
             # Early-Stop + Save model
             if acc_valid.avg > best_acc:
@@ -143,6 +143,7 @@ def main():
                 # Scalars
                 logger.add_scalar('loss_train', loss_train.avg)
                 logger.add_scalar('acc_valid', acc_valid.avg)
+                logger.add_scalar('map_valid', map_valid.avg)
                 logger.add_scalar('learning_rate', args.learning_rate)
                 logger.step()
         

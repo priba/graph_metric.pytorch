@@ -7,11 +7,13 @@ Graph classification
 
 # Python modules
 import torch
-from torch.autograd.variable import Variable
 import glob
 import numpy as np
 import time
 import os
+from sklearn.metrics import average_precision_score
+from joblib import Parallel, delayed
+import multiprocessing
 
 # Own modules
 from options import Options
@@ -70,11 +72,44 @@ def test(data_loader, gallery_loader, net, cuda, distance):
 
         dist_matrix = torch.stack(dist_matrix)
         target_query = torch.cat(target_query)
+    
+        # K-NN classifier
+        
+        predict = knn_predict(dist_matrix, target_gallery)
+        bacc = predict.eq(target_query).float().sum()
+        acc.update(100.0*bacc/predict.size(0))
+        
+        # mAP retrieval
+        nq = target_query.size(0)
+        sim = 1./(1+dist_matrix)
+        str_sim = target_query.unsqueeze(1) == target_gallery
+        if sim.is_cuda:
+            sim, str_sim = sim.cpu(), str_sim.cpu()
+        sim, str_sim = sim.numpy(), str_sim.numpy()
+
+        num_cores = min(multiprocessing.cpu_count(), 32)
+        aps = Parallel(n_jobs=num_cores)(delayed(average_precision_score)(str_sim[iq], sim[iq]) for iq in range(nq))
+
+        meanap.update(np.mean(aps))
     batch_time.update(time.time()-start)
     print('* Test Acc {acc.avg:.3f}; mAP {meanap.avg: .3f}; Time x Test {b_time.avg:.3f}'
             .format(acc=acc, meanap=meanap, b_time=batch_time))
     return acc, meanap
 
+
+def knn_predict(dist_matrix, target_gallery, k=5):
+    ind = np.argsort(dist_matrix, axis=1)
+    sort_target = target_gallery[ind]
+    sort_target = sort_target[:,:k]
+    
+    # Counts
+    counts = np.zeros(sort_target.shape)
+    for i in range(k):
+        counts[:,i] = (sort_target[:, i].unsqueeze(1) == sort_target).long().sum(1)
+
+    predict_ind = counts.argmax(axis=1)
+    predict = [sort_target[i, pi] for i, pi in enumerate(predict_ind)]
+    return torch.stack(predict)
 
 def graph_cat(g):
     nodes = []
