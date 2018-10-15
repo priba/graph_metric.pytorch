@@ -6,6 +6,7 @@ import numpy as np
 from . import data_utils as du
 import os
 import itertools
+import pickle
 
 __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
@@ -16,7 +17,10 @@ class Letters_train(data.Dataset):
         self.root = root_path
         self.file_list = file_list
         self.triplet = triplet
-        self.graphs, self.labels = getFileList(os.path.join(self.root, self.file_list))
+        self.graphs, self.labels = getFileList(self.file_list)
+
+        # To pickle
+        self.graphs = [os.path.splitext(g)[0]+'.p' for g in self.graphs]
 
         self.unique_labels = np.unique(self.labels)
         self.labels = [np.where(target == self.unique_labels)[0][0] for target in self.labels]
@@ -27,24 +31,27 @@ class Letters_train(data.Dataset):
             # Siamese all pairs
             self.groups = list(itertools.permutations(range(len(self.labels)), 2))
 
-
     def __getitem__(self, index):
         ind = self.groups[index]
-
+        
         # Graph 1
-        node_labels1, am1 = create_graph_letter(os.path.join(self.root, self.graphs[ind[0]]))
+        node_labels1, am1 = self._loadgraph(ind[0])
         target1 = self.labels[ind[0]]
         
         # Graph 2
-        node_labels2, am2 = create_graph_letter(os.path.join(self.root, self.graphs[ind[1]]))
+        node_labels2, am2 = self._loadgraph(ind[1])
         target2 = self.labels[ind[1]]
         if self.triplet:
             neg_ind = np.random.choice(np.where(self.labels!=target1)[0], 1)
             # Graph 3
-            node_labels3, am3 = create_graph_letter(os.path.join(self.root, self.graphs[neg_ind[0]]))
+            node_labels3, am3 = self._loadgraph(neg_ind[0])
             return (node_labels1, am1), (node_labels2, am2), (node_labels3, am3), torch.Tensor([])
         target = torch.FloatTensor([0.0]) if target1 == target2 else torch.FloatTensor([1.0])
         return (node_labels1, am1), (node_labels2, am2), torch.Tensor([]), target
+
+    def _loadgraph(self, i):
+        graph_dict = pickle.load( open(os.path.join(self.root, self.graphs[i]), "rb") )
+        return graph_dict['node_labels'], graph_dict['am']
 
     def __len__(self):
         return len(self.groups)
@@ -54,20 +61,28 @@ class Letters(data.Dataset):
     def __init__(self, root_path, file_list):
         self.root = root_path
         self.file_list = file_list
-        self.graphs, self.labels = getFileList(os.path.join(self.root, self.file_list))
+        self.graphs, self.labels = getFileList(self.file_list)
+
+        # To pickle
+        self.graphs = [os.path.splitext(g)[0]+'.p' for g in self.graphs]
 
         self.unique_labels = np.unique(self.labels)
         self.labels = [np.where(target == self.unique_labels)[0][0] for target in self.labels]
 
     def __getitem__(self, index):
         # Graph
-        node_labels, am = create_graph_letter(os.path.join(self.root, self.graphs[index]))
+        node_labels, am = self._loadgraph(index)
         target = self.labels[index]
         
         return (node_labels, am), target
 
     def __len__(self):
         return len(self.labels)
+
+    def _loadgraph(self, i):
+        graph_dict = pickle.load( open(os.path.join(self.root, self.graphs[i]), "rb") )
+        return graph_dict['node_labels'], graph_dict['am']
+
 
 def getFileList(file_path):
     elements = []

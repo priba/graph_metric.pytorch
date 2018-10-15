@@ -6,4 +6,4 @@ tensorboard
 tensorboardX
 sklearn
 joblib
-
+tqdm
