@@ -15,6 +15,7 @@ import glob
 import re
 from tqdm import tqdm
 import pickle
+import sys
 
 __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
@@ -36,9 +37,9 @@ def load_data(dataset, data_path, triplet=False, batch_size=32, prefetch=4):
         gallery_loader = DataLoader(gallery, batch_size=batch_size, collate_fn=du.collate_fn_multiple_size, num_workers=prefetch)
         node_size=2
         return train_loader, valid_loader, test_loader, gallery_loader, node_size
-    elif dataset == 'histograph':
-        sys.exit()
-        return load_histograph(data_path)
+    elif dataset == 'histograph-gw':
+        data_train, data_valid, data_test, gallery = load_histograph(data_path, triplet)
+        return None
     raise NameError(dataset + ' not implemented!')
 
 
@@ -60,10 +61,16 @@ def load_letters(data_path, triplet=False):
 
 def load_histograph(data_path, triplet=False):
     from .HistoGraph import HistoGraph_train, HistoGraph, create_graph_histograph
-
-    data_train = datasets.HistoGraph(data_path, '../../../02_GXL/02_PAR/01_Keypoint/2/', 'train.txt', representation, normalization)
-    data_valid = datasets.HistoGraph(data_path, '../../../02_GXL/02_PAR/01_Keypoint/2/', 'valid.txt', representation, normalization)
-    data_test = datasets.HistoGraph(data_path, '../../../02_GXL/02_PAR/01_Keypoint/2/', 'test.txt', representation, normalization)
+    pickle_dir = data_path.replace('01_GW', '01_GW-pickled')
+    
+    if not os.path.isdir(pickle_dir):
+        # Data to pickle
+        dataset_to_pickle(data_path, pickle_dir, create_graph_histograph, '.gxl')
+    
+    gt_path = os.path.join(data_path, os.pardir, '00_GroundTruth', 'cv1')
+    data_train = HistoGraph_train(pickle_dir, os.path.join(gt_path,'train.txt'), triplet)
+    data_valid = HistoGraph(data_path, '../../../02_GXL/02_PAR/01_Keypoint/2/', 'valid.txt')
+    data_test = HistoGraph(data_path, '../../../02_GXL/02_PAR/01_Keypoint/2/', 'test.txt', representation, normalization)
     return data_train, data_valid, data_test
 
 

@@ -4,7 +4,7 @@ import torch
 import torch.utils.data as data
 import xml.etree.ElementTree as ET
 import numpy as np
-import data_utils as du
+from . import data_utils as du
 import os
 import itertools
 
@@ -14,27 +14,22 @@ __email__ = "priba@cvc.uab.cat"
 
 class HistoGraph_train(data.Dataset):
     def __init__(self, root_path, file_list, triplet=False):
-        self.root = root_path + gxl_path
+        self.root = root_path
         self.file_list = file_list
+        self.triplet = triplet
 
-        self.graphs, self.labels = getFileList(root_path + self.file_list)
-        idx = [os.path.isfile(self.root + g) for g in self.graphs]
-        self.graphs = np.array(self.graphs)[idx]
-        self.labels = np.array(self.labels)[idx]
-
-        with open(root_path + keywords, 'r') as f:
-            self.key_labels = f.read().splitlines()
-
-        self.key_idx = [i for key in self.key_labels for i, l in enumerate(self.labels) if l == key]
-        self.labels = [self.key_labels.index(l) if l in self.key_labels else len(self.key_labels) for l in
-                       self.labels]
-        if test:
-
-            self.labels = np.array(self.labels)[self.key_idx]
-            self.graphs = self.graphs[self.key_idx]
-
-        self.representation = representation
-        self.normalization = normalization
+        self.graphs, self.labels = getFileList(self.file_list)
+        
+        # To pickle
+        self.graphs = [os.path.splitext(g)[0]+'.p' for g in self.graphs]
+        self.labels = np.array(self.labels) 
+        self.unique_labels = np.unique(self.labels)
+        if self.triplet:
+            # Triplet (anchor, positive, negative)
+            self.groups = [ (i, j) for i in range(len(self.labels)) for j in np.where(self.labels[i] == self.labels)[0] if i != j ]
+        else:
+            # Siamese all pairs
+            self.groups = list(itertools.permutations(range(len(self.labels)), 2))
 
     def __getitem__(self, index):
         ind = self.groups[index]
@@ -63,6 +58,7 @@ class HistoGraph_train(data.Dataset):
     def _loadgraph(self, i):
         graph_dict = pickle.load( open(os.path.join(self.root, self.graphs[i]), "rb") )
         return graph_dict['node_labels'], graph_dict['am']
+
 
 class HistoGraph(data.Dataset):
     def __init__(self, root_path, file_list):
@@ -97,6 +93,7 @@ class HistoGraph(data.Dataset):
     def _loadgraph(self, i):
         graph_dict = pickle.load( open(os.path.join(self.root, self.graphs[i]), "rb") )
         return graph_dict['node_labels'], graph_dict['am']
+
 
 def getFileList(file_path):
     with open(file_path, 'r') as f:
