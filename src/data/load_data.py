@@ -58,6 +58,15 @@ def load_letters(data_path, triplet=False):
     return data_train, data_valid, data_test, gallery
 
 
+def load_histograph(data_path, triplet=False):
+    from .HistoGraph import HistoGraph_train, HistoGraph, create_graph_histograph
+
+    data_train = datasets.HistoGraph(data_path, '../../../02_GXL/02_PAR/01_Keypoint/2/', 'train.txt', representation, normalization)
+    data_valid = datasets.HistoGraph(data_path, '../../../02_GXL/02_PAR/01_Keypoint/2/', 'valid.txt', representation, normalization)
+    data_test = datasets.HistoGraph(data_path, '../../../02_GXL/02_PAR/01_Keypoint/2/', 'test.txt', representation, normalization)
+    return data_train, data_valid, data_test
+
+
 def dataset_to_pickle(root_path, out_path, graph_reader, graph_ext):
     file_list = glob.glob(os.path.join(root_path, '*'+graph_ext))
     id_list = np.array([re.search(os.path.join(r'^'+root_path, '(.*)'+graph_ext+'$'), s).group(1) for s in file_list])
@@ -67,10 +76,4 @@ def dataset_to_pickle(root_path, out_path, graph_reader, graph_ext):
         graph_dict = {'node_labels': node_labels, 'am': am}
         pickle_file = os.path.join(out_path, f+'.p')
         pickle.dump(graph_dict, open(pickle_file, "wb"))
-
-def load_histographi(data_path, representation='adj'):
-    data_train = datasets.HistoGraph(data_path, '../../../02_GXL/02_PAR/01_Keypoint/2/', 'train.txt', representation, normalization)
-    data_valid = datasets.HistoGraph(data_path, '../../../02_GXL/02_PAR/01_Keypoint/2/', 'valid.txt', representation, normalization)
-    data_test = datasets.HistoGraph(data_path, '../../../02_GXL/02_PAR/01_Keypoint/2/', 'test.txt', representation, normalization)
-    return data_train, data_valid, data_test
 

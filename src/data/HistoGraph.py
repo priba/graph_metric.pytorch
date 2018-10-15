@@ -12,8 +12,8 @@ __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
 
 
-class HistoGraphRetrieval(data.Dataset):
-    def __init__(self, root_path, gxl_path, file_list, keywords, representation='adj', normalization=False, test=False):
+class HistoGraph_train(data.Dataset):
+    def __init__(self, root_path, file_list, triplet=False):
         self.root = root_path + gxl_path
         self.file_list = file_list
 
@@ -37,27 +37,35 @@ class HistoGraphRetrieval(data.Dataset):
         self.normalization = normalization
 
     def __getitem__(self, index):
+        ind = self.groups[index]
 
         # Graph 1
-        node_labels, am = create_graph_histo(self.root + self.graphs[index], representation=self.representation)
-        target = self.labels[index]
-        node_labels = torch.FloatTensor(node_labels)
-        am = torch.FloatTensor(am)
+        node_labels1, am1 = self._loadgraph(ind[0])
+        target1 = self.labels[ind[0]]
 
-        if self.normalization:
-            node_labels = du.normalize_mean(node_labels)
+        # Graph 2
+        node_labels2, am2 = self._loadgraph(ind[1])
+        target2 = self.labels[ind[1]]
 
-        return node_labels, am, target
+        if self.triplet:
+            neg_ind = np.random.choice(np.where(self.labels!=target1)[0], 1)
+
+            # Graph 3
+            node_labels3, am3 = self._loadgraph(neg_ind[0])
+            return (node_labels1, am1), (node_labels2, am2), (node_labels3, am3), torch.Tensor([])
+
+        target = torch.FloatTensor([0.0]) if target1 == target2 else torch.FloatTensor([1.0])
+        return (node_labels1, am1), (node_labels2, am2), torch.Tensor([]), target
 
     def __len__(self):
         return len(self.labels)
 
-    def getTargetSize(self):
-        return None
+    def _loadgraph(self, i):
+        graph_dict = pickle.load( open(os.path.join(self.root, self.graphs[i]), "rb") )
+        return graph_dict['node_labels'], graph_dict['am']
 
-
-class HistoGraphRetrievalSiamese(data.Dataset):
-    def __init__(self, root_path, gxl_path, file_list, representation='adj', normalization=False):
+class HistoGraph(data.Dataset):
+    def __init__(self, root_path, file_list):
         self.root = root_path + gxl_path
         self.file_list = file_list
 
@@ -77,39 +85,18 @@ class HistoGraphRetrievalSiamese(data.Dataset):
         self.weight[np.invert(pair_label)] = 1.0/np.invert(pair_label).sum()
 
     def __getitem__(self, index):
-        ind = self.pairs[index]
+        # Graph
+        node_labels, am = self._loadgraph(index)
+        target = self.labels[index] 
 
-        # Graph 1
-        node_labels1, am1 = create_graph_histo(self.root + self.graphs[ind[0]], representation=self.representation)
-        target1 = self.labels[ind[0]]
-        node_labels1 = torch.FloatTensor(node_labels1)
-        am1 = torch.FloatTensor(am1)
-
-        if self.normalization:
-            node_labels1 = du.normalize_mean(node_labels1)
-
-        # Graph 2
-        node_labels2, am2 = create_graph_histo(self.root + self.graphs[ind[1]], representation=self.representation)
-        target2 = self.labels[ind[1]]
-        node_labels2 = torch.FloatTensor(node_labels2)
-        am2 = torch.FloatTensor(am2)
-
-        if self.normalization:
-            node_labels2 = du.normalize_mean(node_labels2)
-
-        target = torch.FloatTensor([1.0]) if target1 == target2 else torch.FloatTensor([0.0])
-
-        return node_labels1, am1, node_labels2, am2, target
+        return (node_labels, am), target
 
     def __len__(self):
         return len(self.pairs)
 
-    def getTargetSize(self):
-        return len(self.unique_labels)
-
-    def getWeights(self):
-        return self.weight
-
+    def _loadgraph(self, i):
+        graph_dict = pickle.load( open(os.path.join(self.root, self.graphs[i]), "rb") )
+        return graph_dict['node_labels'], graph_dict['am']
 
 def getFileList(file_path):
     with open(file_path, 'r') as f:
@@ -124,7 +111,7 @@ def getFileList(file_path):
     return elements, classes
 
 
-def create_graph_histo(file, representation='adj'):
+def create_graph_histograph(file, representation='adj'):
 
     tree_gxl = ET.parse(file)
     root_gxl = tree_gxl.getroot()
@@ -142,21 +129,20 @@ def create_graph_histo(file, representation='adj'):
     node_label = np.array(node_label)
     node_id = np.array(node_id)
 
-    if representation=='adj':
-        am = np.zeros((len(node_id), len(node_id), 1))
-    else:
-        am = np.zeros((len(node_id), len(node_id), 2))
-
+    row, col = np.array([]), np.array([])
     for edge in root_gxl.iter('edge'):
         s = np.where(np.array(node_id)==edge.get('from'))[0][0]
         t = np.where(np.array(node_id)==edge.get('to'))[0][0]
 
-        if representation=='adj':
-            am[s,t,:] = 1
-            am[t,s,:] = 1
-        else:
-            dist = du.distance(node_label[s], node_label[t])
-            am[s,t,:] = [dist, du.angle_between(node_label[s], node_label[t])]
-            am[t,s,:] = [dist, du.angle_between(node_label[t], node_label[s])]
+        row = np.append(row, s)
+        col = np.append(col,t)
+
+        row = np.append(row, t)
+        col = np.append(col,s)
+
+    data = np.ones(row.shape)
+
+    am = row, col, data
 
     return node_label, am
+

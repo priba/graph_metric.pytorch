@@ -115,8 +115,7 @@ def create_graph_letter(file):
     node_label = np.array(node_label)
     node_id = np.array(node_id)
 
-    row = np.array([])
-    col = np.array([])
+    row, col = np.array([]), np.array([])
     for edge in root_gxl.iter('edge'):
         s = np.where(np.array(node_id)==edge.get('from'))[0][0]
         t = np.where(np.array(node_id)==edge.get('to'))[0][0]
@@ -133,36 +132,3 @@ def create_graph_letter(file):
 
     return node_label, am
 
-if __name__ == '__main__':
-    from options import Options
-    from load_data import load_data
-
-    # Parse options
-    args = Options().parse()
-
-    # Dataset
-    data_train, data_valid, data_test = load_data(args.dataset, args.data_path, args.representation,
-                                                           args.normalization)
-
-    nodes = 0
-    edges = 0
-    for node_labels, am, target in data_train:
-        nodes = nodes + node_labels.size(0)
-        if len(list(torch.nonzero(am).size())) > 0:
-            edges = edges + torch.nonzero(am).size(0)/2.0
-
-    for node_labels, am, target in data_valid:
-        nodes = nodes + node_labels.size(0)
-        if len(list(torch.nonzero(am).size()))>0:
-            edges = edges + torch.nonzero(am).size(0)/2.0
-
-    for node_labels, am, target in data_test:
-        nodes = nodes + node_labels.size(0)
-        if len(list(torch.nonzero(am).size())) > 0:
-            edges = edges + torch.nonzero(am).size(0)/2.0
-
-    nodes = nodes/(len(data_train)+len(data_valid)+len(data_test)+0.0)
-    edges = edges / (len(data_train) + len(data_valid) + len(data_test)+0.0)
-
-    print('Nodes: ' + str(nodes))
-    print('Edges: ' + str(edges))
