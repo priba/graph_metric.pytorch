@@ -36,10 +36,22 @@ def load_data(dataset, data_path, triplet=False, batch_size=32, prefetch=4):
         test_loader = DataLoader(data_test, batch_size=1, collate_fn=du.collate_fn_multiple_size)
         gallery_loader = DataLoader(gallery, batch_size=batch_size, collate_fn=du.collate_fn_multiple_size, num_workers=prefetch)
         node_size=2
-        return train_loader, valid_loader, test_loader, gallery_loader, node_size
+        return train_loader, valid_loader, gallery_loader, test_loader, gallery_loader, node_size
     elif dataset == 'histograph-gw':
-        data_train, data_valid, data_test, gallery = load_histograph(data_path, triplet)
-        return None
+        data_train, queries, gallery_valid, gallery_test = load_histograph(data_path, triplet)
+        train_loader = DataLoader(data_train, batch_size=batch_size, num_workers=prefetch, collate_fn=du.collate_fn_multiple_size_siamese, shuffle=True)
+
+        if triplet:
+            batch_size = 3*batch_size
+        else:
+            batch_size = 2*batch_size
+
+        # Load same numbers of graphs that are asked in training
+        queries_loader = DataLoader(queries, batch_size=1, collate_fn=du.collate_fn_multiple_size)
+        valid_gallery_loader = DataLoader(gallery_valid, batch_size=batch_size, collate_fn=du.collate_fn_multiple_size, num_workers=prefetch)
+        test_gallery_loader = DataLoader(gallery_test, batch_size=batch_size, collate_fn=du.collate_fn_multiple_size, num_workers=prefetch)
+        node_size=2
+        return train_loader, queries_loader, valid_gallery_loader, queries, test_gallery_loader, node_size
     raise NameError(dataset + ' not implemented!')
 
 
@@ -69,9 +81,19 @@ def load_histograph(data_path, triplet=False):
     
     gt_path = os.path.join(data_path, os.pardir, '00_GroundTruth', 'cv1')
     data_train = HistoGraph_train(pickle_dir, os.path.join(gt_path,'train.txt'), triplet)
-    data_valid = HistoGraph(data_path, '../../../02_GXL/02_PAR/01_Keypoint/2/', 'valid.txt')
-    data_test = HistoGraph(data_path, '../../../02_GXL/02_PAR/01_Keypoint/2/', 'test.txt', representation, normalization)
-    return data_train, data_valid, data_test
+    
+    gallery_valid = HistoGraph(pickle_dir, os.path.join(gt_path, 'valid.txt'))
+    gallery_test = HistoGraph(pickle_dir, os.path.join(gt_path, 'test.txt'))
+
+    queries = HistoGraph(pickle_dir, os.path.join(gt_path, 'train.txt'), os.path.join(gt_path, 'keywords.txt'))
+    
+    # Get labels to create a unique identifier
+    unique_labels = np.unique(np.concatenate((queries.getlabels(), gallery_valid.getlabels(), gallery_test.getlabels())))
+    ulabels_dict = {l:i for i, l in enumerate(unique_labels)}
+    gallery_valid.setlabelsdict(ulabels_dict)
+    gallery_test.setlabelsdict(ulabels_dict)
+    queries.setlabelsdict(ulabels_dict)
+    return data_train, queries, gallery_valid, gallery_test
 
 
 def dataset_to_pickle(root_path, out_path, graph_reader, graph_ext):

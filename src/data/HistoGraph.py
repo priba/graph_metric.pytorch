@@ -7,6 +7,7 @@ import numpy as np
 from . import data_utils as du
 import os
 import itertools
+import pickle
 
 __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
@@ -53,7 +54,7 @@ class HistoGraph_train(data.Dataset):
         return (node_labels1, am1), (node_labels2, am2), torch.Tensor([]), target
 
     def __len__(self):
-        return len(self.labels)
+        return len(self.groups)
 
     def _loadgraph(self, i):
         graph_dict = pickle.load( open(os.path.join(self.root, self.graphs[i]), "rb") )
@@ -61,38 +62,43 @@ class HistoGraph_train(data.Dataset):
 
 
 class HistoGraph(data.Dataset):
-    def __init__(self, root_path, file_list):
-        self.root = root_path + gxl_path
+    def __init__(self, root_path, file_list, keywords_file=None):
+        self.root = root_path
         self.file_list = file_list
 
-        self.graphs, self.labels = getFileList(root_path + self.file_list)
-        idx = [os.path.isfile(self.root + g) for g in self.graphs]
-        self.graphs = np.array(self.graphs)[idx]
-        self.labels = np.array(self.labels)[idx]
-
-        self.pairs = list(itertools.permutations(range(len(self.labels)), 2))
-
-        self.representation = representation
-        self.normalization = normalization
-
-        pair_label = np.array([self.labels[p[0]]==self.labels[p[1]] for p in self.pairs])
-        self.weight = np.zeros(len(pair_label))
-        self.weight[pair_label] = 1.0/pair_label.sum()
-        self.weight[np.invert(pair_label)] = 1.0/np.invert(pair_label).sum()
+        self.graphs, self.labels = getFileList(self.file_list)
+        
+        # To pickle
+        self.graphs = [os.path.splitext(g)[0]+'.p' for g in self.graphs]
+        
+        if keywords_file is not None:
+            with open(keywords_file, 'r') as f:
+                queries = f.read().splitlines()
+            idx_del = [i for i, label in enumerate(self.labels) if label not in queries]
+            
+            for index in sorted(idx_del, reverse=True):
+                del self.labels[index]
+                del self.graphs[index]
 
     def __getitem__(self, index):
         # Graph
         node_labels, am = self._loadgraph(index)
-        target = self.labels[index] 
+        target = self.labels_dict[self.labels[index]]
 
         return (node_labels, am), target
 
     def __len__(self):
-        return len(self.pairs)
+        return len(self.labels)
 
     def _loadgraph(self, i):
         graph_dict = pickle.load( open(os.path.join(self.root, self.graphs[i]), "rb") )
         return graph_dict['node_labels'], graph_dict['am']
+
+    def getlabels(self):
+        return np.unique(self.labels)
+
+    def setlabelsdict(self, lab_dict):
+        self.labels_dict = lab_dict
 
 
 def getFileList(file_path):
