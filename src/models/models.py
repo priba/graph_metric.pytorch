@@ -3,10 +3,10 @@ import torch.nn as nn
 from .layers import GConv
 
 class GNN(nn.Module):
-    def __init__(self, in_feat, out_feat, nlayers=3, dropout=True):
+    def __init__(self, in_feat, out_feat, nlayers=3, hid=256, dropout=True):
         super(GNN, self).__init__()
         self.nlayers = nlayers
-        self.hid = 256
+        self.hid = hid
         self.embedding = nn.Linear(in_feat, self.hid)
         for i in range(1, nlayers):
             module_gc = GConv(i*self.hid, self.hid)

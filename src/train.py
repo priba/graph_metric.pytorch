@@ -85,10 +85,10 @@ def train(data_loader, net, optimizer, cuda, criterion, epoch):
 
 def main():
     print('Prepare data')
-    train_loader, valid_loader, test_loader, gallery_loader = load_data(args.dataset, args.data_path, triplet=args.triplet, batch_size=args.batch_size, prefetch=args.prefetch)
+    train_loader, valid_loader, test_loader, gallery_loader, in_size = load_data(args.dataset, args.data_path, triplet=args.triplet, batch_size=args.batch_size, prefetch=args.prefetch)
 
     print('Create model')
-    net = models.GNN(2, 64) 
+    net = models.GNN(in_size, args.out_size, nlayers=args.nlayers, hid=args.hidden) 
 
     print('Loss & Optimizer')
     if args.triplet:

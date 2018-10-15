@@ -29,7 +29,8 @@ def load_data(dataset, data_path, triplet=False, batch_size=32, prefetch=4):
         valid_loader = DataLoader(data_valid, batch_size=1, collate_fn=du.collate_fn_multiple_size)
         test_loader = DataLoader(data_test, batch_size=1, collate_fn=du.collate_fn_multiple_size)
         gallery_loader = DataLoader(gallery, batch_size=batch_size, collate_fn=du.collate_fn_multiple_size, num_workers=prefetch)
-        return train_loader, valid_loader, test_loader, gallery_loader
+        node_size=2
+        return train_loader, valid_loader, test_loader, gallery_loader, node_size
     elif dataset == 'histograph':
         sys.exit()
         return load_histograph(data_path)

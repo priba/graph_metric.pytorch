@@ -134,13 +134,17 @@ def graph_cat(g):
 
 def main():
     print('Prepare data')
-    train_loader, valid_loader, test_loader = load_data(args.data_path, batch_size=args.batch_size, prefetch=args.prefetch)
+    train_loader, valid_loader, test_loader, gallery_loader, in_size = load_data(args.dataset, args.data_path, triplet=args.triplet, batch_size=args.batch_size, prefetch=args.prefetch)
     
     print('Create model')
-    net = None
+    net = models.GNN(in_size, args.out_size, nlayers=args.nlayers, hid=args.hidden) 
 
     print('Loss & Optimizer')
-    criterion = torch.nn.NLLLoss()
+    print('Loss & Optimizer')
+    if args.triplet:
+        criterion = TripletLoss(margin=args.margin, swap=args.swap)
+    else:
+        criterion = ContrastiveLoss(margin=args.margin)
 
     print('Check CUDA')
     if args.cuda and args.ngpu > 1:

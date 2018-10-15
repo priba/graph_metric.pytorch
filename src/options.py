@@ -20,6 +20,9 @@ class Options():
         parser.add_argument('data_path', type=str, help='Dataset root path.')
         # Model parameters
         parser.add_argument('--batch_size', '-bz', type=int, default=32, help='Batch Size.')
+        parser.add_argument('--out_size', type=int, default=64, help='Node Embedding size.')
+        parser.add_argument('--nlayers', type=int, default=3, help='Number of Convloultions.')
+        parser.add_argument('--hidden', type=int, default=256, help='Hidden size.')
         parser.add_argument('--dropout', type=float, default=0.5, help='Dropout.')
         parser.add_argument('--triplet', action='store_true', help='Triplet flag.')
         parser.add_argument('--swap', action='store_true', help='Swap in the triplet loss.')
