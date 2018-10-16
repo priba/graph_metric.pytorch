@@ -51,7 +51,7 @@ def load_data(dataset, data_path, triplet=False, batch_size=32, prefetch=4):
         valid_gallery_loader = DataLoader(gallery_valid, batch_size=batch_size, collate_fn=du.collate_fn_multiple_size, num_workers=prefetch)
         test_gallery_loader = DataLoader(gallery_test, batch_size=batch_size, collate_fn=du.collate_fn_multiple_size, num_workers=prefetch)
         node_size=2
-        return train_loader, queries_loader, valid_gallery_loader, queries, test_gallery_loader, node_size
+        return train_loader, queries_loader, valid_gallery_loader, queries_loader, test_gallery_loader, node_size
     raise NameError(dataset + ' not implemented!')
 
 
