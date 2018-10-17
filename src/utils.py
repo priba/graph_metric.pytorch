@@ -95,8 +95,8 @@ def mean_average_precision(dist_matrix, target_gallery, target_query):
     aps = Parallel(n_jobs=num_cores)(delayed(average_precision_score)(str_sim[iq], sim[iq]) for iq in range(nq))
     # If str_sim is all 0, aps is nan
     ind = [i for i, ap in enumerate(aps) if np.isnan(ap)]
-    for i in ind:
-        aps[i] = 0.0
+    for i in sorted(ind, reverse=True):
+        del aps[i]
     return np.mean(aps) 
     
 # Checkpoints

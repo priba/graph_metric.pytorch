@@ -27,9 +27,9 @@ def load_data(dataset, data_path, triplet=False, batch_size=32, prefetch=4):
         train_loader = DataLoader(data_train, batch_size=batch_size, num_workers=prefetch, collate_fn=du.collate_fn_multiple_size_siamese, shuffle=True)
 
         if triplet:
-            batch_size = 3*batch_size
+            batch_size = 6*batch_size
         else:
-            batch_size = 2*batch_size
+            batch_size = 4*batch_size
 
         # Load same numbers of graphs that are asked in training
         valid_loader = DataLoader(data_valid, batch_size=1, collate_fn=du.collate_fn_multiple_size)
@@ -42,9 +42,9 @@ def load_data(dataset, data_path, triplet=False, batch_size=32, prefetch=4):
         train_loader = DataLoader(data_train, batch_size=batch_size, num_workers=prefetch, collate_fn=du.collate_fn_multiple_size_siamese, shuffle=True)
 
         if triplet:
-            batch_size = 3*batch_size
+            batch_size = 6*batch_size
         else:
-            batch_size = 2*batch_size
+            batch_size = 4*batch_size
 
         # Load same numbers of graphs that are asked in training
         queries_loader = DataLoader(queries, batch_size=1, collate_fn=du.collate_fn_multiple_size)
@@ -73,8 +73,14 @@ def load_letters(data_path, triplet=False):
 
 def load_histograph(data_path, triplet=False):
     from .HistoGraph import HistoGraph_train, HistoGraph, create_graph_histograph
-    pickle_dir = data_path.replace('01_GW', '01_GW-pickled')
-    
+    # Split path
+    split = os.path.normpath(data_path).split(os.sep)
+    split[-2] = split[-2] + '-pickled'
+    import pdb; pdb.set_trace()
+    pickle_dir = os.path.join(*split)
+    if split[0]=='': 
+        pickle_dir = os.sep + pickle_dir
+
     if not os.path.isdir(pickle_dir):
         # Data to pickle
         dataset_to_pickle(data_path, pickle_dir, create_graph_histograph, '.gxl')
