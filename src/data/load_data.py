@@ -76,7 +76,6 @@ def load_histograph(data_path, triplet=False):
     # Split path
     split = os.path.normpath(data_path).split(os.sep)
     split[-2] = split[-2] + '-pickled'
-    import pdb; pdb.set_trace()
     pickle_dir = os.path.join(*split)
     if split[0]=='': 
         pickle_dir = os.sep + pickle_dir
