@@ -84,19 +84,23 @@ def train(data_loader, net, optimizer, cuda, criterion, epoch):
 
 
 def main():
+    print('Loss & Optimizer')
+    if args.loss=='triplet':
+        args.triplet=True
+        criterion = TripletLoss(margin=args.margin, swap=args.swap)
+    elif args.loss=='triplet_distance':
+        args.triplet=True
+        criterion = TripletLoss(margin=args.margin, swap=args.swap, dist=True)
+    else:
+        args.triplet=False
+        criterion = ContrastiveLoss(margin=args.margin)
+    
     print('Prepare data')
     train_loader, valid_loader, valid_gallery_loader, test_loader, test_gallery_loader, in_size = load_data(args.dataset, args.data_path, triplet=args.triplet, batch_size=args.batch_size, prefetch=args.prefetch)
 
     print('Create model')
     net = models.GNN(in_size, args.out_size, nlayers=args.nlayers, hid=args.hidden) 
 
-    print('Loss & Optimizer')
-    if args.loss=='triplet':
-        criterion = TripletLoss(margin=args.margin, swap=args.swap)
-    elif args.loss=='triplet_distance':
-        criterion = TripletLoss(margin=args.margin, swap=args.swap, dist=True)
-    else:
-        criterion = ContrastiveLoss(margin=args.margin)
 
     optimizer = torch.optim.SGD(net.parameters(), args.learning_rate, momentum=args.momentum, weight_decay=args.decay, nesterov=True)
 

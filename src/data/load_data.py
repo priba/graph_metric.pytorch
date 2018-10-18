@@ -22,8 +22,10 @@ __email__ = "priba@cvc.uab.cat"
 
 
 def load_data(dataset, data_path, triplet=False, batch_size=32, prefetch=4):
+
     if dataset == 'letters':
         data_train, data_valid, data_test, gallery = load_letters(data_path, triplet)
+        print_statistics(data_train, data_valid, gallery, data_test, gallery)
         train_loader = DataLoader(data_train, batch_size=batch_size, num_workers=prefetch, collate_fn=du.collate_fn_multiple_size_siamese, shuffle=True)
 
         if triplet:
@@ -39,6 +41,7 @@ def load_data(dataset, data_path, triplet=False, batch_size=32, prefetch=4):
         return train_loader, valid_loader, gallery_loader, test_loader, gallery_loader, node_size
     elif dataset == 'histograph-gw':
         data_train, queries, gallery_valid, gallery_test = load_histograph_gw(data_path, triplet)
+        print_statistics(data_train, queries, gallery_valid, queries, gallery_test)
         train_loader = DataLoader(data_train, batch_size=batch_size, num_workers=prefetch, collate_fn=du.collate_fn_multiple_size_siamese, shuffle=True)
 
         if triplet:
@@ -54,6 +57,7 @@ def load_data(dataset, data_path, triplet=False, batch_size=32, prefetch=4):
         return train_loader, queries_loader, valid_gallery_loader, queries_loader, test_gallery_loader, node_size
     elif dataset == 'histograph-ak':
         data_train, queries_valid, gallery_valid, queries_test, gallery_test = load_histograph_ak(data_path, triplet)
+        print_statistics(data_train, queries_valid, gallery_valid, queries_test, gallery_test)
         train_loader = DataLoader(data_train, batch_size=batch_size, num_workers=prefetch, collate_fn=du.collate_fn_multiple_size_siamese, shuffle=True)
 
         if triplet:
@@ -69,6 +73,12 @@ def load_data(dataset, data_path, triplet=False, batch_size=32, prefetch=4):
         node_size=2
         return train_loader, valid_queries_loader, valid_gallery_loader, test_queries_loader, test_gallery_loader, node_size
     raise NameError(dataset + ' not implemented!')
+
+
+def print_statistics(data_train, data_valid, gallery_valid, data_test, gallery_test): 
+    print('* Train with {} groups of graphs'.format(len(data_train)))
+    print('* Validation with {} queries and {} graphs in the gallery'.format(len(data_valid), len(gallery_valid)))
+    print('* Test with {} queries and {} graphs in the gallery'.format(len(data_test), len(gallery_test)))
 
 
 def load_letters(data_path, triplet=False):

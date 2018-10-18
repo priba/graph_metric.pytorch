@@ -74,7 +74,7 @@ class HistoGraph(data.Dataset):
         if keywords_file is not None:
             with open(keywords_file, 'r') as f:
                 queries = f.read().splitlines()
-            queries = [ q.split(' ')[1] for q in queries ]
+            queries = [ q.split(' ')[-1] for q in queries ]
             idx_del = [i for i, label in enumerate(self.labels) if label not in queries]
             
             for index in sorted(idx_del, reverse=True):
