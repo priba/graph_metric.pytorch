@@ -47,12 +47,13 @@ class ContrastiveLoss(nn.Module):
 
 class TripletLoss(nn.Module):
 
-    def __init__(self, margin=1.0, swap=False, reduction='elementwise_mean'):
+    def __init__(self, margin=1.0, swap=False, reduction='elementwise_mean',dist=False):
         super(TripletLoss, self).__init__()
         self.margin = margin
         self.swap = swap
         self.reduction = reduction
         self.distance = SoftHd()
+        self.dist = dist
 
     def forward(self, anc, pos, neg):
         d_pos = self.distance(anc, pos, mode='pairs')
@@ -62,7 +63,8 @@ class TripletLoss(nn.Module):
             d_neg = torch.min(d_neg, d_neg_aux)
 
         loss = torch.clamp(d_pos-d_neg+self.margin, 0.0)
-
+        if self.dist:
+            loss = loss + d_pos
         if self.reduction == 'none':
             return loss
         

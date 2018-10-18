@@ -91,8 +91,10 @@ def main():
     net = models.GNN(in_size, args.out_size, nlayers=args.nlayers, hid=args.hidden) 
 
     print('Loss & Optimizer')
-    if args.triplet:
+    if args.loss=='triplet':
         criterion = TripletLoss(margin=args.margin, swap=args.swap)
+    elif args.loss=='triplet_distance':
+        criterion = TripletLoss(margin=args.margin, swap=args.swap, dist=True)
     else:
         criterion = ContrastiveLoss(margin=args.margin)
 
