@@ -47,3 +47,33 @@ class GConv(nn.Module):
                + str(self.bias_bool) + ', batch_norm=' \
                + str(self.bn_bool) + ')'
 
+class EdgeCompute(nn.Module):
+    """
+    Simple Edge computation layer, similar to https://arxiv.org/pdf/1711.04043.pdf
+    """
+
+    def __init__(self, in_features, hid=64):
+        super(EdgeCompute, self).__init__()
+        self.in_features = in_features
+        self.hid = hid
+        self.mlp = nn.Sequential(
+                nn.Linear(self.in_features, self.hid),
+                nn.ReLU(),
+                nn.Linear(self.hid, 1)
+                )
+
+    def forward(self, x, W):
+        if W._nnz() == 0:
+            return W
+
+        indices = W._indices()
+        data = W._values()
+        x_diff = x[indices[0]] - x[indices[1]]
+        data = self.mlp(x_diff.abs()).squeeze()
+        Wnew = torch.sparse.FloatTensor(indices, data, W.shape)
+        return Wnew
+
+    def __repr__(self):
+        return self.__class__.__name__ + '(in_features=' \
+               + str(self.in_features) + ')'
+

@@ -24,7 +24,6 @@ class Options():
         parser.add_argument('--nlayers', type=int, default=3, help='Number of Convloultions.')
         parser.add_argument('--hidden', type=int, default=256, help='Hidden size.')
         parser.add_argument('--dropout', type=float, default=0.5, help='Dropout.')
-        parser.add_argument('--triplet', action='store_true', help='Triplet flag.')
         parser.add_argument('--loss', type=str, default='siamese', choices=['siamese', 'triplet', 'triplet_distance'], help='Loss used for training.')
         parser.add_argument('--swap', action='store_true', help='Swap in the triplet loss.')
         parser.add_argument('--margin', type=float, default=1, help='Margin in the loss function.')
