@@ -22,7 +22,7 @@ class HistoGraph_train(data.Dataset):
         self.graphs, self.labels = getFileList(self.file_list)
         
         # To pickle
-        self.graphs = [os.path.splitext(g)[0]+'.p' for g in self.graphs]
+        self.graphs = [g+'.p' for g in self.graphs]
         self.labels = np.array(self.labels) 
         self.unique_labels = np.unique(self.labels)
         if self.triplet:
@@ -69,11 +69,12 @@ class HistoGraph(data.Dataset):
         self.graphs, self.labels = getFileList(self.file_list)
         
         # To pickle
-        self.graphs = [os.path.splitext(g)[0]+'.p' for g in self.graphs]
+        self.graphs = [g+'.p' for g in self.graphs]
         
         if keywords_file is not None:
             with open(keywords_file, 'r') as f:
                 queries = f.read().splitlines()
+            queries = [ q.split(' ')[1] for q in queries ]
             idx_del = [i for i, label in enumerate(self.labels) if label not in queries]
             
             for index in sorted(idx_del, reverse=True):
@@ -110,7 +111,7 @@ def getFileList(file_path):
     for line in lines:        
         f, c = line.split(' ')[:2]
         classes += [c]
-        elements += [f + '.gxl']
+        elements += [f]
     return elements, classes
 
 
