@@ -75,7 +75,7 @@ def knn_accuracy(dist_matrix, target_gallery, target_query, k=5):
     # Accuracy
     acc = predict.eq(target_query).float().sum()
     acc = 100.0*acc/predict.size(0)
-    return acc
+    return acc.item()
 
 
 def mean_average_precision(dist_matrix, target_gallery, target_query):
@@ -112,7 +112,7 @@ def load_checkpoint(model_file):
     if os.path.isfile(model_file):
         print("=> loading model '{}'".format(model_file))
         checkpoint = torch.load(model_file)
-        print("=> loaded model '{}' (epoch {}, acc {})".format(model_file, checkpoint['epoch'], checkpoint['best_acc']))
+        print("=> loaded model '{}' (epoch {}, map {})".format(model_file, checkpoint['epoch'], checkpoint['best_map']))
         return checkpoint
     else:
         print("=> no model found at '{}'".format(model_file))

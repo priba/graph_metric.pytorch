@@ -114,14 +114,14 @@ def main():
         net = net.cuda()
         
     start_epoch = 0
-    best_acc = 0
+    best_map = 0
     early_stop_counter = 0
     if args.load is not None:
         print('Loading model')
         checkpoint = load_checkpoint(args.load)
         net.load_state_dict(checkpoint['state_dict'])
         start_epoch = checkpoint['epoch']
-        best_acc = checkpoint['best_acc']
+        best_map = checkpoint['best_map']
 
     if not args.test:
         print('***Train***')
@@ -134,11 +134,11 @@ def main():
             acc_valid, map_valid = test(valid_loader, valid_gallery_loader, net, args.cuda, criterion.getDistance())
             
             # Early-Stop + Save model
-            if acc_valid.avg > best_acc:
-                best_acc = acc_valid.avg
+            if map_valid.avg > best_map:
+                best_map = map_valid.avg
                 early_stop_counter = 0
                 if args.save is not None:
-                    save_checkpoint({'epoch': epoch + 1, 'state_dict': net.state_dict(), 'best_acc': best_acc}, directory=args.save, file_name='checkpoint')
+                    save_checkpoint({'epoch': epoch + 1, 'state_dict': net.state_dict(), 'best_map': best_map}, directory=args.save, file_name='checkpoint')
             else:
                 if early_stop_counter == args.early_stop:
                     break
@@ -159,7 +159,7 @@ def main():
             best_model_file = os.path.join(args.save, 'checkpoint.pth')
             checkpoint = load_checkpoint(best_model_file)
             net.load_state_dict(checkpoint['state_dict'])
-            print('Best model at epoch {epoch} and acc {acc}%'.format(epoch=checkpoint['epoch'],acc=checkpoint['best_acc']))
+            print('Best model at epoch {epoch} and acc {acc}%'.format(epoch=checkpoint['epoch'],acc=checkpoint['best_map']))
 
     print('***Test***')
     test(test_loader, test_gallery_loader, net, args.cuda, criterion.getDistance())

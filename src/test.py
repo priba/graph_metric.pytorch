@@ -17,6 +17,8 @@ from options import Options
 from Logger import LogMetric
 from utils import load_checkpoint, graph_cuda, graph_to_sparse, graph_cat, knn_accuracy, mean_average_precision
 from models import models
+from data.load_data import load_data
+from loss.contrastive import ContrastiveLoss, TripletLoss
 
 __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
@@ -94,7 +96,7 @@ def main():
         criterion = ContrastiveLoss(margin=args.margin)
 
     print('Prepare data')
-    train_loader, valid_loader, test_loader, gallery_loader, in_size = load_data(args.dataset, args.data_path, triplet=args.triplet, batch_size=args.batch_size, prefetch=args.prefetch)
+    train_loader, valid_loader, valid_gallery_loader, test_loader, test_gallery_loader, in_size = load_data(args.dataset, args.data_path, triplet=args.triplet, batch_size=args.batch_size, prefetch=args.prefetch)
     
     print('Create model')
     net = models.GNN(in_size, args.out_size, nlayers=args.nlayers, hid=args.hidden) 
@@ -109,19 +111,19 @@ def main():
         net = net.cuda()
         
     start_epoch = 0
-    best_acc = 0
+    best_map = 0
     early_stop_counter = 0
     if args.load is not None:
         print('Loading model')
         checkpoint = load_checkpoint(args.load)
         net.load_state_dict(checkpoint['state_dict'])
         start_epoch = checkpoint['epoch']
-        best_acc = checkpoint['best_acc']
+        best_map = checkpoint['best_map']
 
-        print('Loaded model at epoch {epoch} and acc {acc}%'.format(epoch=checkpoint['epoch'],acc=checkpoint['best_acc']))
+        print('Loaded model at epoch {epoch} and mAP {meanap}%'.format(epoch=checkpoint['epoch'],meanap=checkpoint['best_map']))
 
     print('***Test***')
-    losses, acc, embedding = test(test_loader, net, args.cuda, criterion, evaluation, plot_data=True)
+    test(test_loader, test_gallery_loader, net, args.cuda, criterion.getDistance())
 
 if __name__ == '__main__':
     # Parse options
