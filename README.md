@@ -2,17 +2,30 @@
 
 Graph Metric Learning in PyTorch.
 
-Paper coming soon...
-
 ## Install
 
-Run the following bash script:
+- Install (Virtualenv)[https://virtualenv.pypa.io/en/stable/].
+    $ [sudo] pip install virtualenv
 
-    $ ./install.sh
+- Install all the requirements. Note that the following script will automatically creates a virtualenvironment, therefore if (Virtualenv)[https://virtualenv.pypa.io/en/stable/] is not installed, sudo is required.  
+    $ [sudo] ./install.sh
 
-If not, it install ''virtualenv' to your system and vreates a virtual environment with all the packages found in ''requirements.txt'.
+## Usage
 
-## Run
+### Train
+
+* Write configuration file. Follow the example [here](./config/).
+* Run the training script with the corresponding configuration file `./train.sh config/train.cfg`
+
+### Test
+
+* Write configuration file. Follow the example [here](./config/) providing a load path (`--load`).
+* Run the test script with the corresponding configuration file `./test.sh config/test.cfg`
+
+### Tensorboard
+
+* Setup your server running the script with the corresponding path `./board.sh ./checkpoints/`
+* Go to your [tensorboard page](localhost:6006) using your browser.
 
 ## Author
 
