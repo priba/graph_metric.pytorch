@@ -16,18 +16,20 @@ import os
 from options import Options
 from Logger import LogMetric
 from utils import load_checkpoint, graph_cuda, graph_to_sparse, graph_cat, knn_accuracy, mean_average_precision
-from models import models
+from models import models, distance
 from data.load_data import load_data
 from loss.contrastive import ContrastiveLoss, TripletLoss
 
 __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
 
-def test(data_loader, gallery_loader, net, cuda, distance):
+def test(data_loader, gallery_loader, nets, cuda):
     batch_time = LogMetric.AverageMeter()
     acc = LogMetric.AverageMeter()
     meanap = LogMetric.AverageMeter()
 
+    net, distance = nets
+    
     # switch to test mode
     net.eval()
     distance.eval()
@@ -100,6 +102,7 @@ def main():
     
     print('Create model')
     net = models.GNN(in_size, args.out_size, nlayers=args.nlayers, hid=args.hidden) 
+    distNet = distance.SoftHd()
 
     print('Check CUDA')
     if args.cuda and args.ngpu > 1:
@@ -108,8 +111,9 @@ def main():
 
     if args.cuda:
         print('\t* CUDA')
-        net = net.cuda()
-        
+        net, distNet = net.cuda(), distNet.cuda()
+        criterion = criterion.cuda()
+
     start_epoch = 0
     best_map = 0
     early_stop_counter = 0
@@ -117,13 +121,13 @@ def main():
         print('Loading model')
         checkpoint = load_checkpoint(args.load)
         net.load_state_dict(checkpoint['state_dict'])
+        distNet.load_state_dict(checkpoint['state_dict_dist'])
         start_epoch = checkpoint['epoch']
         best_map = checkpoint['best_map']
-
         print('Loaded model at epoch {epoch} and mAP {meanap}%'.format(epoch=checkpoint['epoch'],meanap=checkpoint['best_map']))
 
     print('***Test***')
-    test(test_loader, test_gallery_loader, net, args.cuda, criterion.getDistance())
+    test(test_loader, test_gallery_loader, [net, distNet], args.cuda)
 
 if __name__ == '__main__':
     # Parse options

@@ -16,7 +16,7 @@ import os
 from options import Options
 from Logger import LogMetric
 from utils import save_checkpoint, load_checkpoint, graph_cuda, graph_to_sparse
-from models import models
+from models import models, distance
 from test import test
 from data.load_data import load_data
 from loss.contrastive import ContrastiveLoss, TripletLoss
@@ -34,12 +34,14 @@ def adjust_learning_rate(optimizer, epoch):
             param_group['lr'] = args.learning_rate
 
 
-def train(data_loader, net, optimizer, cuda, criterion, epoch):
+def train(data_loader, nets, optimizer, cuda, criterion, epoch):
     batch_time = LogMetric.AverageMeter()
     losses = LogMetric.AverageMeter()
 
+    net, distNet = nets
     # switch to train mode
     net.train()
+    distNet.train()
 
     end = time.time()
     for i, (g1, g2, g3, target) in enumerate(data_loader):
@@ -62,9 +64,9 @@ def train(data_loader, net, optimizer, cuda, criterion, epoch):
 
         if args.triplet:
             g3_out = net(g3)
-            loss = criterion(g1_out, g2_out, g3_out)
+            loss = criterion(g1_out, g2_out, g3_out, distNet)
         else:
-            loss = criterion(g1_out, g2_out, target)
+            loss = criterion(g1_out, g2_out, target, distNet)
         
         # Gradiensts and update
         loss.backward()
@@ -100,9 +102,9 @@ def main():
 
     print('Create model')
     net = models.GNN(in_size, args.out_size, nlayers=args.nlayers, hid=args.hidden) 
-
-
-    optimizer = torch.optim.SGD(net.parameters(), args.learning_rate, momentum=args.momentum, weight_decay=args.decay, nesterov=True)
+    distNet = distance.SoftHd()
+    
+    optimizer = torch.optim.SGD(list(net.parameters())+list(distNet.parameters()), args.learning_rate, momentum=args.momentum, weight_decay=args.decay, nesterov=True)
 
     print('Check CUDA')
     if args.cuda and args.ngpu > 1:
@@ -111,8 +113,9 @@ def main():
 
     if args.cuda:
         print('\t* CUDA')
-        net = net.cuda()
-        
+        net, distNet = net.cuda(), distNet.cuda()
+        criterion = criterion.cuda()
+
     start_epoch = 0
     best_map = 0
     early_stop_counter = 0
@@ -120,6 +123,7 @@ def main():
         print('Loading model')
         checkpoint = load_checkpoint(args.load)
         net.load_state_dict(checkpoint['state_dict'])
+        distNet.load_state_dict(checkpoint['state_dict_dist'])
         start_epoch = checkpoint['epoch']
         best_map = checkpoint['best_map']
 
@@ -130,15 +134,15 @@ def main():
             # Update learning rate
             adjust_learning_rate(optimizer, epoch)
 
-            loss_train = train(train_loader, net, optimizer, args.cuda, criterion, epoch)
-            acc_valid, map_valid = test(valid_loader, valid_gallery_loader, net, args.cuda, criterion.getDistance())
+            loss_train = train(train_loader, [net, distNet], optimizer, args.cuda, criterion, epoch)
+            acc_valid, map_valid = test(valid_loader, valid_gallery_loader, [net, distNet], args.cuda)
             
             # Early-Stop + Save model
             if map_valid.avg > best_map:
                 best_map = map_valid.avg
                 early_stop_counter = 0
                 if args.save is not None:
-                    save_checkpoint({'epoch': epoch + 1, 'state_dict': net.state_dict(), 'best_map': best_map}, directory=args.save, file_name='checkpoint')
+                    save_checkpoint({'epoch': epoch + 1, 'state_dict': net.state_dict(), 'state_dict_dist': distNet.state_dict(), 'best_map': best_map}, directory=args.save, file_name='checkpoint')
             else:
                 if early_stop_counter == args.early_stop:
                     break
@@ -159,10 +163,11 @@ def main():
             best_model_file = os.path.join(args.save, 'checkpoint.pth')
             checkpoint = load_checkpoint(best_model_file)
             net.load_state_dict(checkpoint['state_dict'])
+            distNet.load_state_dict(checkpoint['state_dict_dist'])
             print('Best model at epoch {epoch} and acc {acc}%'.format(epoch=checkpoint['epoch'],acc=checkpoint['best_map']))
 
     print('***Test***')
-    test(test_loader, test_gallery_loader, net, args.cuda, criterion.getDistance())
+    test(test_loader, test_gallery_loader, [net, distNet], args.cuda)
 
 if __name__ == '__main__':
     # Parse options

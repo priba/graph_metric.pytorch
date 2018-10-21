@@ -9,7 +9,6 @@ Based on: https://github.com/delijati/pytorch-siamese/blob/master/contrastive.py
 
 import torch
 import torch.nn as nn
-from .distance import SoftHd
 
 __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
@@ -21,10 +20,9 @@ class ContrastiveLoss(nn.Module):
         super(ContrastiveLoss, self).__init__()
         self.margin = margin
         self.reduction = reduction
-        self.distance = SoftHd()
 
-    def forward(self, g1, g2, y):
-        d = self.distance(g1, g2, mode='pairs')
+    def forward(self, g1, g2, y, distance):
+        d = distance(g1, g2, mode='pairs')
 
         md = self.margin - d
         md = torch.clamp(md, min=0.0)
@@ -42,8 +40,6 @@ class ContrastiveLoss(nn.Module):
         
         raise NameError(self.reduction + ' not implemented!')
 
-    def getDistance(self):
-        return self.distance
 
 class TripletLoss(nn.Module):
 
@@ -52,14 +48,13 @@ class TripletLoss(nn.Module):
         self.margin = margin
         self.swap = swap
         self.reduction = reduction
-        self.distance = SoftHd()
         self.dist = dist
 
-    def forward(self, anc, pos, neg):
-        d_pos = self.distance(anc, pos, mode='pairs')
-        d_neg = self.distance(anc, neg, mode='pairs')
+    def forward(self, anc, pos, neg, distance):
+        d_pos = distance(anc, pos, mode='pairs')
+        d_neg = distance(anc, neg, mode='pairs')
         if self.swap:
-            d_neg_aux = self.distance(pos, neg, mode='pairs')
+            d_neg_aux = distance(pos, neg, mode='pairs')
             d_neg = torch.min(d_neg, d_neg_aux)
 
         loss = torch.clamp(d_pos-d_neg+self.margin, 0.0)
@@ -77,5 +72,3 @@ class TripletLoss(nn.Module):
         
         raise NameError(self.reduction + ' not implemented!')
 
-    def getDistance(self):
-        return self.distance

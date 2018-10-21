@@ -59,7 +59,8 @@ class EdgeCompute(nn.Module):
         self.mlp = nn.Sequential(
                 nn.Linear(self.in_features, self.hid),
                 nn.ReLU(),
-                nn.Linear(self.hid, 1)
+                nn.Linear(self.hid, 1),
+                nn.Sigmoid()
                 )
 
     def forward(self, x, W):
