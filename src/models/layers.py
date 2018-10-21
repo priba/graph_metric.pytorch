@@ -52,26 +52,35 @@ class EdgeCompute(nn.Module):
     Simple Edge computation layer, similar to https://arxiv.org/pdf/1711.04043.pdf
     """
 
-    def __init__(self, in_features, hid=64):
+    def __init__(self, in_features, hid=64, J=2):
         super(EdgeCompute, self).__init__()
         self.in_features = in_features
         self.hid = hid
-        self.mlp = nn.Sequential(
-                nn.Linear(self.in_features, self.hid),
-                nn.ReLU(),
-                nn.Linear(self.hid, 1),
-                nn.Sigmoid()
-                )
+        self.J = J
+
+        # Define a network per each order in the adjacency matrix
+        for i in range(1, self.J):
+            module_mlp = nn.Sequential(
+                    nn.Linear(self.in_features, self.hid),
+                    nn.ReLU(),
+                    nn.Linear(self.hid, 1),
+                    nn.Sigmoid()
+                    )
+            self.add_module('mlp{}'.format(i), module_mlp)
 
     def forward(self, x, W):
+        Wnew = []
         if W._nnz() == 0:
-            return W
-
-        indices = W._indices()
-        data = W._values()
-        x_diff = x[indices[0]] - x[indices[1]]
-        data = self.mlp(x_diff.abs()).squeeze()
-        Wnew = torch.sparse.FloatTensor(indices, data, W.shape)
+            for i in range(1, self.J):
+                Wnew.append(W)
+        else:
+            for i in range(1, self.J):
+                Wi = W.pow(i)
+                indices = Wi._indices()
+                data = Wi._values()
+                x_diff = x[indices[0]] - x[indices[1]]
+                data = self._modules['mlp{}'.format(i)](x_diff.abs()).squeeze()
+                Wnew.append(torch.sparse.FloatTensor(indices, data, W.shape))
         return Wnew
 
     def __repr__(self):

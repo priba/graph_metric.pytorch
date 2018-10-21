@@ -7,37 +7,58 @@ class GNN(nn.Module):
         super(GNN, self).__init__()
         self.nlayers = nlayers
         self.hid = hid
+
+        # Embedding Function
         self.embedding = nn.Linear(in_feat, self.hid)
+
         self.J = J
         for i in range(1, nlayers):
-            module_wc = EdgeCompute(i*self.hid, self.hid)
+            # Compute learned connections up to order self.J
+            module_wc = EdgeCompute(i*self.hid, self.hid, J=self.J)
             self.add_module('wc{}'.format(i), module_wc)
             
+            # Graph convolution
             module_gc = GConv(i*self.hid, self.hid, J=self.J)
             self.add_module('gc{}'.format(i), module_gc)
-        self.wc_last = EdgeCompute(self.nlayers*self.hid, self.hid)
+
+        # Last operation to map to output size
+        self.wc_last = EdgeCompute(self.nlayers*self.hid, self.hid, J=self.J)
         self.gc_last = GConv(self.nlayers*self.hid, out_feat, bias_bool=False, bn_bool=False, J=self.J)
+
         self.dropout = nn.Dropout()
         self.nl = nn.LeakyReLU()
 
     def forward(self, g):
-        x, W, g_size = g
-        Wid = self._wid(x.size(0))
+        # Unpack graph
+        x, Win, g_size = g
 
+        # Initialize self connections
+        Wid = [self._wid(x.size(0))]
+
+        # Embedd node positions to higher space
         x = self.nl(self.embedding(x))
 
         for i in range(1, self.nlayers):
-            W = self._modules['wc{}'.format(i)](x, W)
-            x_new = self.nl(self._modules['gc{}'.format(i)](x, [Wid, W]))
+            # List of adjacency information up to order self.J
+            W = self._modules['wc{}'.format(i)](x, Win)
+
+            # Graph Convolution
+            x_new = self.nl(self._modules['gc{}'.format(i)](x, Wid + W))
+
+            # Concat information at different steps
             x = torch.cat([x, x_new], 1)
 
         x = self.dropout(x)
-        W = self.wc_last(x, W)
-        x = self.gc_last(x, [Wid, W])
 
-        return (x, W, g_size)
+        # Last layer
+        W = self.wc_last(x, Win)
+        x = self.gc_last(x, Wid + W)
+
+        # W[0] contains the learned values of Win
+        return (x, W[0], g_size)
 
     def _wid(self, s):
+        # Identity matrix (self connections) of size s
         i = torch.LongTensor(range(s))
         i = torch.stack((i,i))
         Wid = torch.sparse.FloatTensor(i, torch.ones(s), torch.Size([s,s]))
