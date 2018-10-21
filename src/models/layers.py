@@ -13,7 +13,7 @@ class GConv(nn.Module):
         super(GConv, self).__init__()
         self.in_features = in_features
         self.out_features = out_features
-        self.J = 2 # Number of W
+        self.J = J # Number of W
         self.bias_bool = bias_bool
         self.fc = nn.Linear(self.J*self.in_features, self.out_features, bias=self.bias_bool)
 

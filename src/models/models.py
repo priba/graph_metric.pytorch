@@ -3,19 +3,20 @@ import torch.nn as nn
 from .layers import GConv, EdgeCompute
 
 class GNN(nn.Module):
-    def __init__(self, in_feat, out_feat, nlayers=3, hid=256, dropout=True):
+    def __init__(self, in_feat, out_feat, nlayers=3, hid=256, dropout=True, J=2):
         super(GNN, self).__init__()
         self.nlayers = nlayers
         self.hid = hid
         self.embedding = nn.Linear(in_feat, self.hid)
+        self.J = J
         for i in range(1, nlayers):
             module_wc = EdgeCompute(i*self.hid, self.hid)
             self.add_module('wc{}'.format(i), module_wc)
             
-            module_gc = GConv(i*self.hid, self.hid)
+            module_gc = GConv(i*self.hid, self.hid, J=self.J)
             self.add_module('gc{}'.format(i), module_gc)
         self.wc_last = EdgeCompute(self.nlayers*self.hid, self.hid)
-        self.gc_last = GConv(self.nlayers*self.hid, out_feat, bias_bool=False, bn_bool=False)
+        self.gc_last = GConv(self.nlayers*self.hid, out_feat, bias_bool=False, bn_bool=False, J=self.J)
         self.dropout = nn.Dropout()
         self.nl = nn.LeakyReLU()
 
@@ -31,6 +32,7 @@ class GNN(nn.Module):
             x = torch.cat([x, x_new], 1)
 
         x = self.dropout(x)
+        W = self.wc_last(x, W)
         x = self.gc_last(x, [Wid, W])
 
         return (x, W, g_size)

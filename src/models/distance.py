@@ -50,7 +50,7 @@ class SoftHd(nn.Module):
         d = a + b
         d = d/(set1.shape[0] + set2.shape[0])
         
-        return d
+        return d, indB, indA
 
 
     def forward(self, g1, g2, mode='pairs'):
@@ -86,10 +86,10 @@ class SoftHd(nn.Module):
         start2 = 0
         for i in range(bz):
             if mode == 'pairs':
-                d[i] = self.soft_hausdorff(x1[start1:start1+sz1[i]], conn1[start1:start1+sz1[i]], x2[start2:start2+sz2[i]], conn2[start2:start2+sz2[i]])
+                d[i],_,_ = self.soft_hausdorff(x1[start1:start1+sz1[i]], conn1[start1:start1+sz1[i]], x2[start2:start2+sz2[i]], conn2[start2:start2+sz2[i]])
                 start1 = start1 + sz1[i]
             elif mode == 'retrieval':
-                d[i] = self.soft_hausdorff(x1, conn1, x2[start2:start2+sz2[i]], conn2[start2:start2+sz2[i]])
+                d[i],_,_ = self.soft_hausdorff(x1, conn1, x2[start2:start2+sz2[i]], conn2[start2:start2+sz2[i]])
             else:
                 raise NameError(mode + ' not implemented!')
             start2 = start2 + sz2[i]
