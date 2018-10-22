@@ -27,6 +27,7 @@ class Options():
         parser.add_argument('--loss', type=str, default='siamese', choices=['siamese', 'triplet', 'triplet_distance'], help='Loss used for training.')
         parser.add_argument('--swap', action='store_true', help='Swap in the triplet loss.')
         parser.add_argument('--margin', type=float, default=1, help='Margin in the loss function.')
+        parser.add_argument('--pow', type=int, default=2, help='Number of adjacency information that will be used, up to power pow-1.')
         # Optimization options
         parser.add_argument('--prefetch', type=int, default=4, help='Number of workers to load data.')
         parser.add_argument('--epochs', '-e', type=int, default=1000, help='Number of epochs to train.')

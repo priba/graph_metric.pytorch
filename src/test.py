@@ -101,7 +101,7 @@ def main():
     train_loader, valid_loader, valid_gallery_loader, test_loader, test_gallery_loader, in_size = load_data(args.dataset, args.data_path, triplet=args.triplet, batch_size=args.batch_size, prefetch=args.prefetch)
     
     print('Create model')
-    net = models.GNN(in_size, args.out_size, nlayers=args.nlayers, hid=args.hidden) 
+    net = models.GNN(in_size, args.out_size, nlayers=args.nlayers, hid=args.hidden, J=args.pow) 
     distNet = distance.SoftHd()
 
     print('Check CUDA')
