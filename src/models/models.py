@@ -36,7 +36,7 @@ class GNN(nn.Module):
         Wid = [self._wid(x.size(0))]
 
         # Embedd node positions to higher space
-        x = self.nl(self.embedding(x))
+        x = self.embedding(x)
 
         for i in range(1, self.nlayers):
             # List of adjacency information up to order self.J
@@ -44,11 +44,12 @@ class GNN(nn.Module):
 
             # Graph Convolution
             x_new = self.nl(self._modules['gc{}'.format(i)](x, Wid + W))
-
+            
+            # Dropout
+            x_new = self.dropout(x_new)
+            
             # Concat information at different steps
             x = torch.cat([x, x_new], 1)
-
-        x = self.dropout(x)
 
         # Last layer
         W = self.wc_last(x, Win)

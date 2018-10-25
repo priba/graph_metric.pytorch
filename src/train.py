@@ -188,9 +188,11 @@ if __name__ == '__main__':
 
     if not args.test and args.log is not None:
         print('Initialize logger')
+        ind = len(glob.glob(args.log + '*_run-batchSize_{}'.format(args.batch_size)))
         log_dir = args.log + '{}_run-batchSize_{}/' \
-                .format(len(glob.glob(args.log + '*_run-batchSize_{}'.format(args.batch_size))), args.batch_size)
-
+                .format(ind, args.batch_size)
+        args.save = args.save + '{}_run-batchSize_{}/' \
+                .format(ind, args.batch_size)
         # Create logger
         print('Log dir:\t' + log_dir)
         logger = LogMetric.Logger(log_dir, force=True)
