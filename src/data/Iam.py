@@ -12,13 +12,12 @@ __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
 
 
-class Letters_train(data.Dataset):
+class Iam_train(data.Dataset):
     def __init__(self, root_path, file_list, triplet):
         self.root = root_path
         self.file_list = file_list
         self.triplet = triplet
         self.graphs, self.labels = getFileList(self.file_list)
-
         # To pickle
         self.graphs = [os.path.splitext(g)[0]+'.p' for g in self.graphs]
 
@@ -51,13 +50,14 @@ class Letters_train(data.Dataset):
 
     def _loadgraph(self, i):
         graph_dict = pickle.load( open(os.path.join(self.root, self.graphs[i]), "rb") )
-        return graph_dict['node_labels'], graph_dict['am']
+        nl = graph_dict['node_labels']/graph_dict['node_labels'].max()
+        return nl, graph_dict['am']
 
     def __len__(self):
         return len(self.groups)
 
 
-class Letters(data.Dataset):
+class Iam(data.Dataset):
     def __init__(self, root_path, file_list):
         self.root = root_path
         self.file_list = file_list
@@ -73,7 +73,7 @@ class Letters(data.Dataset):
         # Graph
         node_labels, am = self._loadgraph(index)
         target = self.labels[index]
-        
+            
         return (node_labels, am), target
 
     def __len__(self):
@@ -81,7 +81,8 @@ class Letters(data.Dataset):
 
     def _loadgraph(self, i):
         graph_dict = pickle.load( open(os.path.join(self.root, self.graphs[i]), "rb") )
-        return graph_dict['node_labels'], graph_dict['am']
+        nl = graph_dict['node_labels']/graph_dict['node_labels'].max()
+        return nl, graph_dict['am']
 
 
 def getFileList(file_path):
@@ -93,11 +94,11 @@ def getFileList(file_path):
         for sec_child in child:
             if sec_child.tag == 'print':
                 elements += [sec_child.attrib['file']]
-                classes += sec_child.attrib['class']
+                classes += [sec_child.attrib['class']]
     return elements, classes
 
 
-def create_graph_letter(file):
+def create_graph_iam (file):
 
     tree_gxl = ET.parse(file)
     root_gxl = tree_gxl.getroot()
@@ -107,9 +108,15 @@ def create_graph_letter(file):
         node_id += [node.get('id')]
         for attr in node.iter('attr'):
             if (attr.get('name') == 'x'):
-                x = float(attr.find('float').text)
+                if attr.find('float') is not None:
+                    x = float(attr.find('float').text)
+                else:
+                    x = float(attr.find('Integer').text)
             elif (attr.get('name') == 'y'):
-                y = float(attr.find('float').text)
+                if attr.find('float') is not None:
+                    y = float(attr.find('float').text)
+                else:
+                    y = float(attr.find('Integer').text)
         node_label += [[x, y]]
 
     node_label = np.array(node_label)
@@ -129,6 +136,6 @@ def create_graph_letter(file):
     data = np.ones(row.shape)
 
     am = row, col, data
-
+    import pdb; pdb.set_trace() 
     return node_label, am
 

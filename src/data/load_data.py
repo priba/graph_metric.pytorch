@@ -23,8 +23,8 @@ __email__ = "priba@cvc.uab.cat"
 
 def load_data(dataset, data_path, triplet=False, batch_size=32, prefetch=4):
 
-    if dataset == 'letters':
-        data_train, data_valid, data_test, gallery = load_letters(data_path, triplet)
+    if dataset == 'iam':
+        data_train, data_valid, data_test, gallery = load_iam(data_path, triplet)
         print_statistics(data_train, data_valid, gallery, data_test, gallery)
         train_loader = DataLoader(data_train, batch_size=batch_size, num_workers=prefetch, collate_fn=du.collate_fn_multiple_size_siamese, shuffle=True)
 
@@ -81,19 +81,29 @@ def print_statistics(data_train, data_valid, gallery_valid, data_test, gallery_t
     print('* Test with {} queries and {} graphs in the gallery'.format(len(data_test), len(gallery_test)))
 
 
-def load_letters(data_path, triplet=False):
-    from .Letters import Letters_train, Letters, create_graph_letter
-
-    pickle_dir = os.path.join(data_path, os.pardir, os.pardir, 'Letters-pickled', os.path.basename(data_path))
+def load_iam(data_path, triplet=False):
+    from .Iam import Iam_train, Iam, create_graph_iam
+    # Split path
+    split = os.path.normpath(data_path).split(os.sep)
+    split[-2] = split[-2] + '-pickled'
+    pickle_dir = os.path.join(*split)
+    if split[0]=='': 
+        pickle_dir = os.sep + pickle_dir
+    
     if not os.path.isdir(pickle_dir):
         # Data to pickle
-        dataset_to_pickle(data_path, pickle_dir, create_graph_letter, '.gxl')
+        dataset_to_pickle(data_path, pickle_dir, create_graph_iam, '.gxl')
     
     # Get data for train, validation and test
-    data_train = Letters_train(pickle_dir, os.path.join(data_path, 'train.cxl'), triplet)
-    data_valid = Letters(pickle_dir, os.path.join(data_path, 'validation.cxl'))
-    data_test = Letters(pickle_dir, os.path.join(data_path, 'test.cxl'))
-    gallery = Letters(pickle_dir, os.path.join(data_path, 'train.cxl'))
+    data_train = Iam_train(pickle_dir, os.path.join(data_path, 'train.cxl'), triplet)
+    
+    if os.path.isfile(os.path.join(data_path, 'validation.cxl')):
+        data_valid = Iam(pickle_dir, os.path.join(data_path, 'validation.cxl'))
+    else:
+        data_valid = Iam(pickle_dir, os.path.join(data_path, 'valid.cxl'))
+
+    data_test = Iam(pickle_dir, os.path.join(data_path, 'test.cxl'))
+    gallery = Iam(pickle_dir, os.path.join(data_path, 'train.cxl'))
     return data_train, data_valid, data_test, gallery
 
 

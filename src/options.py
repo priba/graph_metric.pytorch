@@ -16,7 +16,7 @@ class Options():
         # MODEL SETTINGS
         parser = argparse.ArgumentParser(description='Train a Metric Learning Graph Neural Network', formatter_class=argparse.ArgumentDefaultsHelpFormatter)
         # Positional arguments
-        parser.add_argument('dataset', type=str, choices=['letters', 'histograph-gw', 'histograph-ak'], help='Dataset.')
+        parser.add_argument('dataset', type=str, choices=['iam', 'histograph-gw', 'histograph-ak'], help='Dataset.')
         parser.add_argument('data_path', type=str, help='Dataset root path.')
         # Model parameters
         parser.add_argument('--batch_size', '-bz', type=int, default=32, help='Batch Size.')
