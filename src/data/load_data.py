@@ -42,11 +42,17 @@ def load_data(dataset, data_path, triplet=False, batch_size=32, prefetch=4):
     elif dataset == 'histograph-gw':
         data_train, queries, gallery_valid, gallery_test = load_histograph_gw(data_path, triplet)
         print_statistics(data_train, queries, gallery_valid, queries, gallery_test)
-        train_loader = DataLoader(data_train, batch_size=batch_size, num_workers=prefetch, collate_fn=du.collate_fn_multiple_size_siamese, shuffle=True)
 
         if triplet:
+            train_loader = DataLoader(data_train, batch_size=batch_size, num_workers=prefetch, collate_fn=du.collate_fn_multiple_size_siamese, shuffle=True)
             batch_size = 6*batch_size
         else:
+            pairs = np.array([True if data_train.labels[g[0]]==data_train.labels[g[1]] else False for g in data_train.groups])
+            weights = np.zeros(len(pairs))
+            weights[pairs] = 1.0/(pairs+0.0).sum()
+            weights[np.invert(pairs)] = 1.0/(np.invert(pairs)+0.0).sum()
+            train_sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, int(2*(pairs+0.0).sum()), replacement=True)
+            train_loader = DataLoader(data_train, batch_size=batch_size, num_workers=prefetch, collate_fn=du.collate_fn_multiple_size_siamese, sampler=train_sampler, pin_memory=True)
             batch_size = 4*batch_size
 
         # Load same numbers of graphs that are asked in training
