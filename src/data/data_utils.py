@@ -99,14 +99,14 @@ def collate_fn_multiple_size_siamese(batch):
         row1.append(batch[i][0][1][0]+offset1)
         col1.append(batch[i][0][1][1]+offset1)
         data1.append(batch[i][0][1][2])
-        offset1 += g_size1[i]
+        offset1 += g_size1[i].item()
 
         # G2
         nl2.append(batch[i][1][0])
         row2.append(batch[i][1][1][0]+offset2)
         col2.append(batch[i][1][1][1]+offset2)
         data2.append(batch[i][1][1][2])
-        offset2 += g_size2[i]
+        offset2 += g_size2[i].item()
 
         if triplet:
             # G3
@@ -114,7 +114,7 @@ def collate_fn_multiple_size_siamese(batch):
             row3.append(batch[i][2][1][0]+offset3)
             col3.append(batch[i][2][1][1]+offset3)
             data3.append(batch[i][2][1][2])
-            offset3 += g_size3[i]
+            offset3 += g_size3[i].item()
 
     nl1 = torch.FloatTensor(np.concatenate(nl1, axis=0))
     row1 = torch.LongTensor(np.concatenate(row1, axis=0))

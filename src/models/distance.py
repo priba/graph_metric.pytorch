@@ -58,6 +58,8 @@ class SoftHd(nn.Module):
         '''
         x1, am1, sz1 = g1
         x2, am2, sz2 = g2
+        
+        
         oneVec1 = torch.ones(am1.shape[1]).unsqueeze(1)
         oneVec2 = torch.ones(am2.shape[1]).unsqueeze(1)
         if x1.is_cuda:
@@ -66,12 +68,12 @@ class SoftHd(nn.Module):
         if am1._nnz() == 0:
             conn1 = oneVec1
         else:
-            conn1 = am1.mm(oneVec1) + oneVec1
+            conn1 = torch.sparse.mm(am1, oneVec1) + oneVec1
 
         if am2._nnz() == 0:
             conn2 = oneVec2
         else:
-            conn2 = am2.mm(oneVec2) + oneVec2
+            conn2 = torch.sparse.mm(am2, oneVec2) + oneVec2
 
         conn1, conn2 = conn1.squeeze(), conn2.squeeze()
 
@@ -92,5 +94,5 @@ class SoftHd(nn.Module):
             else:
                 raise NameError(mode + ' not implemented!')
             start2 = start2 + sz2[i]
-
         return d
+

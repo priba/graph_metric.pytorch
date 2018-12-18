@@ -2,6 +2,7 @@ import math
 
 import torch
 import torch.nn as nn
+from torch.autograd import Function
 
 
 class GConv(nn.Module):
@@ -31,7 +32,7 @@ class GConv(nn.Module):
                     out = out.cuda()
                 output.append(out)
             else:
-                output.append(torch.spmm(w, x))
+                output.append(torch.sparse.mm(w, x))
         output = torch.cat(output, dim=1)
         output = self.fc(output)
 
@@ -80,10 +81,45 @@ class EdgeCompute(nn.Module):
                 data = Wi._values()
                 x_diff = x[indices[0]] - x[indices[1]]
                 data = self._modules['mlp{}'.format(i)](x_diff.abs()).squeeze()
-                Wnew.append(torch.sparse.FloatTensor(indices, data, W.shape))
+                Wnew.append(ValuesToSparse.apply(indices, data, W.shape))
         return Wnew
 
     def __repr__(self):
         return self.__class__.__name__ + '(in_features=' \
                + str(self.in_features) + ')'
+
+# Copy Gradients when getting the values of a sparse tensor
+class GetValues(Function):
+    @staticmethod
+    def forward(ctx, input):
+        ctx.save_for_backward(input)
+        output = input._values().clone()
+        return output
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        input, = ctx.saved_tensors
+        grad_input = None
+        
+        grad_input = torch.sparse.FloatTensor(input._indices(), grad_output, input.shape)
+        if input.is_cuda:
+            grad_input = grad_input.cuda()
+        return grad_input
+
+
+# Create a new torch Float Tensor and allow the gradients to backpropagate
+class ValuesToSparse(Function):
+    @staticmethod
+    def forward(ctx, indices, data, shape):
+        ctx.save_for_backward(indices, data)
+        output = torch.sparse.FloatTensor(indices, data, shape).requires_grad_(True)
+        return output
+
+    @staticmethod
+    def backward(ctx, grad_output):
+        indices, input = ctx.saved_tensors
+        grad_input = None
+        grad_output = grad_output.coalesce()
+        grad_input = grad_output._values().clone()
+        return None, grad_input, None
 
