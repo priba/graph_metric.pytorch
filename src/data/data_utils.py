@@ -35,7 +35,7 @@ def collate_fn_multiple_size(batch):
         row.append(batch[i][0][1][0]+offset)
         col.append(batch[i][0][1][1]+offset)
         data.append(batch[i][0][1][2])
-        offset += g_size[i]
+        offset += g_size[i].item()
 
     nl = torch.FloatTensor(np.concatenate(nl, axis=0))
     row = torch.LongTensor(np.concatenate(row, axis=0))
