@@ -138,8 +138,8 @@ def main():
             acc_valid, map_valid = test(valid_loader, valid_gallery_loader, [net, distNet], args.cuda)
             
             # Early-Stop + Save model
-            if map_valid.avg > best_map:
-                best_map = map_valid.avg
+            if acc_valid.avg > best_map:
+                best_map = acc_valid.avg
                 early_stop_counter = 0
                 if args.save is not None:
                     save_checkpoint({'epoch': epoch + 1, 'state_dict': net.state_dict(), 'state_dict_dist': distNet.state_dict(), 'best_map': best_map}, directory=args.save, file_name='checkpoint')

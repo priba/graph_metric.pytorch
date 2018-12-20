@@ -19,10 +19,16 @@ __email__ = 'priba@cvc.uab.cat'
 
 # Data
 def graph_to_sparse(g):
-    g_out = ( g[0],
-              torch.sparse.FloatTensor(g[1], g[2], (g[0].shape[0], g[0].shape[0])),
-              g[3]
-            )
+    if g[1].shape[0]==0:
+        g_out = ( g[0],
+                  torch.sparse.FloatTensor(size=(g[0].shape[0], g[0].shape[0])),
+                  g[3]
+                )
+    else:
+        g_out = ( g[0],
+                  torch.sparse.FloatTensor(g[1], g[2], (g[0].shape[0], g[0].shape[0])),
+                  g[3]
+                )
     return g_out
 
 
@@ -59,16 +65,16 @@ def graph_cat(g):
 # Evaluation
 def knn_accuracy(dist_matrix, target_gallery, target_query, k=5):
     # Predict
-    ind = np.argsort(dist_matrix, axis=1)
+    _, ind = dist_matrix.sort(1)
     sort_target = target_gallery[ind]
     sort_target = sort_target[:,:k]
     
     # Counts
-    counts = np.zeros(sort_target.shape)
+    counts = torch.zeros(sort_target.shape)
     for i in range(k):
         counts[:,i] = (sort_target[:, i].unsqueeze(1) == sort_target).long().sum(1)
 
-    predict_ind = counts.argmax(axis=1)
+    predict_ind = counts.argmax(1)
     predict = [sort_target[i, pi] for i, pi in enumerate(predict_ind)]
     predict = torch.stack(predict)
 
