@@ -110,11 +110,15 @@ def create_graph_iam (file):
             if (attr.get('name') == 'x'):
                 if attr.find('float') is not None:
                     x = float(attr.find('float').text)
+                elif attr.find('int') is not None:
+                    x = float(attr.find('int').text)
                 else:
                     x = float(attr.find('Integer').text)
             elif (attr.get('name') == 'y'):
                 if attr.find('float') is not None:
                     y = float(attr.find('float').text)
+                elif attr.find('int') is not None:
+                    y = float(attr.find('int').text)
                 else:
                     y = float(attr.find('Integer').text)
         node_label += [[x, y]]
@@ -136,6 +140,5 @@ def create_graph_iam (file):
     data = np.ones(row.shape)
 
     am = row, col, data
-    import pdb; pdb.set_trace() 
     return node_label, am
 
