@@ -117,7 +117,7 @@ def main():
         criterion = criterion.cuda()
 
     start_epoch = 0
-    best_map = 0
+    best_perf = 0
     early_stop_counter = 0
     if args.load is not None:
         print('Loading model')
@@ -125,7 +125,7 @@ def main():
         net.load_state_dict(checkpoint['state_dict'])
         distNet.load_state_dict(checkpoint['state_dict_dist'])
         start_epoch = checkpoint['epoch']
-        best_map = checkpoint['best_map']
+        best_perf = checkpoint['best_perf']
 
     if not args.test:
         print('***Train***')
@@ -138,11 +138,11 @@ def main():
             acc_valid, map_valid = test(valid_loader, valid_gallery_loader, [net, distNet], args.cuda)
             
             # Early-Stop + Save model
-            if acc_valid.avg > best_map:
-                best_map = acc_valid.avg
+            if acc_valid.avg > best_perf:
+                best_perf = acc_valid.avg
                 early_stop_counter = 0
                 if args.save is not None:
-                    save_checkpoint({'epoch': epoch + 1, 'state_dict': net.state_dict(), 'state_dict_dist': distNet.state_dict(), 'best_map': best_map}, directory=args.save, file_name='checkpoint')
+                    save_checkpoint({'epoch': epoch + 1, 'state_dict': net.state_dict(), 'state_dict_dist': distNet.state_dict(), 'best_perf': best_perf}, directory=args.save, file_name='checkpoint')
             else:
                 if early_stop_counter == args.early_stop:
                     break
@@ -164,7 +164,7 @@ def main():
             checkpoint = load_checkpoint(best_model_file)
             net.load_state_dict(checkpoint['state_dict'])
             distNet.load_state_dict(checkpoint['state_dict_dist'])
-            print('Best model at epoch {epoch} and acc {acc}%'.format(epoch=checkpoint['epoch'],acc=checkpoint['best_map']))
+            print('Best model at epoch {epoch} and acc {acc}%'.format(epoch=checkpoint['epoch'],acc=checkpoint['best_perf']))
 
     print('***Test***')
     test(test_loader, test_gallery_loader, [net, distNet], args.cuda)

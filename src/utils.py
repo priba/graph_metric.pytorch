@@ -118,7 +118,7 @@ def load_checkpoint(model_file):
     if os.path.isfile(model_file):
         print("=> loading model '{}'".format(model_file))
         checkpoint = torch.load(model_file)
-        print("=> loaded model '{}' (epoch {}, map {})".format(model_file, checkpoint['epoch'], checkpoint['best_map']))
+        print("=> loaded model '{}' (epoch {}, Best Performance {})".format(model_file, checkpoint['epoch'], checkpoint['best_perf']))
         return checkpoint
     else:
         print("=> no model found at '{}'".format(model_file))
