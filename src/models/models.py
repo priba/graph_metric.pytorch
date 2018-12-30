@@ -23,10 +23,10 @@ class GNN(nn.Module):
 
         # Last operation to map to output size
         self.wc_last = EdgeCompute(self.nlayers*self.hid, self.hid, J=self.J)
-        self.gc_last = GConv(self.nlayers*self.hid, out_feat, bias_bool=False, bn_bool=False, J=self.J)
-
+        self.fc_last = nn.Linear(self.nlayers*self.hid, out_feat, bias=True)
+        
         self.dropout = nn.Dropout()
-        self.nl = nn.LeakyReLU()
+        self.nl = nn.ReLU()
 
     def forward(self, g):
         # Unpack graph
@@ -36,7 +36,7 @@ class GNN(nn.Module):
         Wid = [self._wid(x.size(0))]
 
         # Embedd node positions to higher space
-        x = self.embedding(x)
+        x = self.dropout(self.nl(self.embedding(x)))
 
         for i in range(1, self.nlayers):
             # List of adjacency information up to order self.J
@@ -53,7 +53,7 @@ class GNN(nn.Module):
 
         # Last layer
         W = self.wc_last(x, Win)
-        x = self.gc_last(x, Wid + W)
+        x = self.fc_last(x)
 
         # W[0] contains the learned values of Win
         return (x, W[0], g_size)
@@ -71,3 +71,4 @@ class GNN(nn.Module):
 if __name__=="__main__":
     net = GNN(3, 20)
     print(net)
+

@@ -64,6 +64,8 @@ class EdgeCompute(nn.Module):
             module_mlp = nn.Sequential(
                     nn.Linear(self.in_features, self.hid),
                     nn.ReLU(),
+                    nn.Linear(self.hid, self.hid),
+                    nn.ReLU(),
                     nn.Linear(self.hid, 1),
                     nn.Sigmoid()
                     )
