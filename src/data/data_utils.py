@@ -26,7 +26,7 @@ def collate_fn_multiple_size(batch):
     row = []
     col = []
     data = []
-    targets = torch.LongTensor([x[-1] for x in batch])
+    targets = [x[-1] for x in batch]
     
     offset = 0
 

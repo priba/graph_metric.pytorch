@@ -66,39 +66,37 @@ def graph_cat(g):
 def knn_accuracy(dist_matrix, target_gallery, target_query, k=5):
     # Predict
     _, ind = dist_matrix.sort(1)
-    sort_target = target_gallery[ind]
+    sort_target = target_gallery[ind.cpu()]
     sort_target = sort_target[:,:k]
     
     # Counts
-    counts = torch.zeros(sort_target.shape)
+    counts = np.zeros(sort_target.shape)
     for i in range(k):
-        counts[:,i] = (sort_target[:, i].unsqueeze(1) == sort_target).long().sum(1)
-
+        #counts[:,i] = (sort_target[:, i].unsqueeze(1) == sort_target).long().sum(1)
+        counts[:,i] = (np.expand_dims(sort_target[:, i], axis=1) == sort_target).sum(1)
+    
     predict_ind = counts.argmax(1)
     predict = [sort_target[i, pi] for i, pi in enumerate(predict_ind)]
-    predict = torch.stack(predict)
+    predict = np.stack(predict)
 
     # Accuracy
-    acc = predict.eq(target_query).float().sum()
-    acc = 100.0*acc/predict.size(0)
-    return acc.item()
+    acc = (predict == target_query).astype(np.float).sum()
+    acc = 100.0*acc/predict.shape[0]
+    return acc
 
 
 def mean_average_precision(dist_matrix, target_gallery, target_query):
     # Number of queries
-    nq = target_query.size(0)
+    nq = target_query.shape[0]
 
     # Distance to similarity
     sim = 1./(1+dist_matrix)
 
     # Relevant items
-    str_sim = target_query.unsqueeze(1) == target_gallery
-    if sim.is_cuda:
-        sim, str_sim = sim.cpu(), str_sim.cpu()
-    sim, str_sim = sim.numpy(), str_sim.numpy()
+    str_sim = (np.expand_dims(target_query, axis=1) == np.expand_dims(target_gallery, axis=0)) * 1
 
     num_cores = min(multiprocessing.cpu_count(), 32)
-    aps = Parallel(n_jobs=num_cores)(delayed(average_precision_score)(str_sim[iq], sim[iq]) for iq in range(nq))
+    aps = Parallel(n_jobs=num_cores)(delayed(average_precision_score)(str_sim[iq], sim[iq].cpu().numpy()) for iq in range(nq))
     # If str_sim is all 0, aps is nan
     ind = [i for i, ap in enumerate(aps) if np.isnan(ap)]
     for i in sorted(ind, reverse=True):

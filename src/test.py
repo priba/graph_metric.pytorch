@@ -45,7 +45,6 @@ def test(data_loader, gallery_loader, nets, cuda):
             g = graph_to_sparse(g)
             if cuda:
                 g = graph_cuda(g)
-                target = target.cuda()
 
             # Output
             g_out  = net(g)
@@ -53,7 +52,7 @@ def test(data_loader, gallery_loader, nets, cuda):
             target_gallery.append(target)
             g_gallery.append(g_out)
 
-        target_gallery = torch.cat(target_gallery)
+        target_gallery = np.array(np.concatenate(target_gallery))
         g_gallery = graph_cat(g_gallery)
 
         target_query = []
@@ -62,7 +61,6 @@ def test(data_loader, gallery_loader, nets, cuda):
             # Prepare input data
             if cuda:
                 g = graph_cuda(g)
-                target = target.cuda()
         
             # Output
             g_out  = net(g)
@@ -72,7 +70,7 @@ def test(data_loader, gallery_loader, nets, cuda):
             target_query.append(target)
 
         dist_matrix = torch.stack(dist_matrix)
-        target_query = torch.cat(target_query)
+        target_query = np.array(np.concatenate(target_query))
     
         # K-NN classifier
         acc.update(knn_accuracy(dist_matrix, target_gallery, target_query, k=5))

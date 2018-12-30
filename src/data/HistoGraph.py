@@ -84,7 +84,8 @@ class HistoGraph(data.Dataset):
     def __getitem__(self, index):
         # Graph
         node_labels, am = self._loadgraph(index)
-        target = self.labels_dict[self.labels[index]]
+        #target = self.labels_dict[self.labels[index]]
+        target = self.labels[index]
 
         return (node_labels, am), target
 

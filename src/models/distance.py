@@ -34,11 +34,11 @@ class SoftHd(nn.Module):
         dist_matrix = self.cdist(set1, set2)
 
         # Insertions and delitions
-        dist_matrix = torch.cat([dist_matrix, (self.ins_del_cost*connections1).unsqueeze(1)], dim=1)
-        zero_diagonal = torch.zeros(1)
-        if dist_matrix.is_cuda:
-            zero_diagonal = zero_diagonal.cuda()
-        dist_matrix = torch.cat([dist_matrix, torch.cat([self.ins_del_cost*connections2, zero_diagonal]).unsqueeze(0)], dim=0)
+#        dist_matrix = torch.cat([dist_matrix, (self.ins_del_cost*connections1).unsqueeze(1)], dim=1)
+#        zero_diagonal = torch.zeros(1)
+#        if dist_matrix.is_cuda:
+#            zero_diagonal = zero_diagonal.cuda()
+ #       dist_matrix = torch.cat([dist_matrix, torch.cat([self.ins_del_cost*connections2, zero_diagonal]).unsqueeze(0)], dim=0)
         # \sum_{a\in set1} \inf_{b_\in set2} d(a,b)
         a, indA = dist_matrix.min(0)
         a = a.sum()
