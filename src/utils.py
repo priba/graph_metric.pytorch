@@ -100,7 +100,7 @@ def mean_average_precision(dist_matrix, target_gallery, target_query):
     # If str_sim is all 0, aps is nan
     ind = [i for i, ap in enumerate(aps) if np.isnan(ap)]
     for i in sorted(ind, reverse=True):
-        del aps[i]
+        aps[i] = 1.0
     return np.mean(aps) 
     
 # Checkpoints
