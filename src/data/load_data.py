@@ -56,9 +56,9 @@ def load_data(dataset, data_path, triplet=False, batch_size=32, prefetch=4):
             batch_size = 4*batch_size
 
         # Load same numbers of graphs that are asked in training
-        queries_loader = DataLoader(queries, batch_size=1, collate_fn=du.collate_fn_multiple_size)
-        valid_gallery_loader = DataLoader(gallery_valid, batch_size=batch_size, collate_fn=du.collate_fn_multiple_size, num_workers=prefetch)
-        test_gallery_loader = DataLoader(gallery_test, batch_size=batch_size, collate_fn=du.collate_fn_multiple_size, num_workers=prefetch)
+        queries_loader = DataLoader(queries, batch_size=1, collate_fn=du.collate_fn_multiple_size, shuffle=False)
+        valid_gallery_loader = DataLoader(gallery_valid, batch_size=batch_size, collate_fn=du.collate_fn_multiple_size, num_workers=prefetch, shuffle=False)
+        test_gallery_loader = DataLoader(gallery_test, batch_size=batch_size, collate_fn=du.collate_fn_multiple_size, num_workers=prefetch, shuffle=False)
         node_size=2
         return train_loader, queries_loader, valid_gallery_loader, queries_loader, test_gallery_loader, node_size
     elif dataset == 'histograph-ak':
