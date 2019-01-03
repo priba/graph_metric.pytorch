@@ -28,7 +28,10 @@ class SoftHd(nn.Module):
         
         dist_matrix = x_norm + y_norm - 2.0 * torch.mm(set1, y_t)
         
-        return dist_matrix
+#        xx = set1.unsqueeze(1).expand((set1.size(0), set2.size(0), set1.size(1)))
+#        yy = set2.unsqueeze(0).expand_as(xx)
+#        dxy = (xx-yy).pow(2).sum(-1).sqrt()
+        return dist_matrix.sqrt()
 
     def soft_hausdorff(self, set1, connections1, set2, connections2):
         dist_matrix = self.cdist(set1, set2)

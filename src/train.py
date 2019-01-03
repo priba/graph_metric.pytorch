@@ -146,7 +146,8 @@ def main():
             else:
                 if early_stop_counter == args.early_stop:
                     break
-                early_stop_counter += 1
+                if epoch>100:
+                    early_stop_counter += 1
 
             # Logger
             if args.log:
