@@ -7,7 +7,7 @@ class GNN(nn.Module):
         super(GNN, self).__init__()
         self.nlayers = nlayers
         self.hid = hid
-
+ 
         # Embedding Function
         self.embedding = nn.Linear(in_feat, self.hid, bias=False)
 
@@ -34,10 +34,8 @@ class GNN(nn.Module):
 
         # Initialize self connections
         Wid = [self._wid(x.size(0))]
-
         # Embedd node positions to higher space
         x = self.embedding(x)
-
         for i in range(1, self.nlayers):
             # List of adjacency information up to order self.J
             #W = self._modules['wc{}'.format(i)](x, Win)
@@ -53,8 +51,8 @@ class GNN(nn.Module):
 
         # Last layer
 #        W = self.wc_last(x, Win)
-        x = nn.Sigmoid()(self.fc_last(x))
-
+        x = self.fc_last(x)
+        x = x / x.pow(2).sum(1, keepdim=True).sqrt()
         # W[0] contains the learned values of Win
         return (x, Win, g_size)
 
