@@ -64,8 +64,6 @@ class EdgeCompute(nn.Module):
             module_mlp = nn.Sequential(
                     nn.Linear(self.in_features, self.hid),
                     nn.ReLU(),
-                    nn.Linear(self.hid, self.hid),
-                    nn.ReLU(),
                     nn.Linear(self.hid, 1),
                     nn.Sigmoid()
                     )
@@ -89,6 +87,51 @@ class EdgeCompute(nn.Module):
     def __repr__(self):
         return self.__class__.__name__ + '(in_features=' \
                + str(self.in_features) + ')'
+
+
+class Block(nn.Module):
+    def __init__(self, in_features, out_features, J=2):
+        super(Block, self).__init__()
+        self.in_features = in_features
+        self.out_features = out_features
+        self.J = J
+        self.nl = nn.ReLU()
+
+        # Last operation to map to output size
+        self.wc1 = EdgeCompute(self.in_features, 32, J=self.J)
+        self.wc2 = EdgeCompute(self.in_features, 32, J=self.J)
+        
+        self.conv1 = GConv(self.in_features, self.out_features, J=self.J+1)
+        
+        self.dropout = nn.Dropout(0.3)
+
+        self.conv2 = GConv(self.out_features, self.out_features, J=self.J+1)
+
+        if self.in_features != self.out_features:
+            self.conv_res = nn.Linear(self.in_features, self.out_features, bias=False)
+
+
+    def forward(self, x, Wid, Win):
+        W1 = self.wc1(x, Win)
+        W2 = self.wc2(x, Win)
+
+        residual = x
+
+        x = self.conv1(x, Wid + W1 + W2)
+        x = self.nl(x)
+
+        x = self.dropout(x)
+
+        x = self.conv2(x, Wid + W1 + W2)
+
+        if self.in_features != self.out_features:
+            residual = self.conv_res(residual)
+
+        x = x + residual
+        x = self.nl(x)
+
+        return x
+
 
 # Copy Gradients when getting the values of a sparse tensor
 class GetValues(Function):

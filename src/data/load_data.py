@@ -47,15 +47,15 @@ def load_data(dataset, data_path, triplet=False, batch_size=32, prefetch=4):
             anchors = np.array([data_train.labels[g[0]] for g in data_train.groups])
             anchors_counts = [(a==anchors).sum() for a in anchors]
             anchor_probs = 1/np.array(anchors_counts)
-            train_sampler = torch.utils.data.sampler.WeightedRandomSampler(anchor_probs, 600, replacement=False)
-            train_loader = DataLoader(data_train, batch_size=batch_size, num_workers=prefetch, collate_fn=du.collate_fn_multiple_size_siamese, sampler=train_sampler, pin_memory=True)
+            train_sampler = torch.utils.data.sampler.WeightedRandomSampler(anchor_probs, 10000, replacement=True)
+            train_loader = DataLoader(data_train, batch_size=batch_size, num_workers=prefetch, collate_fn=du.collate_fn_multiple_size_siamese, sampler=train_sampler)
             batch_size = 6*batch_size
         else:
             pairs = np.array([True if data_train.labels[g[0]]==data_train.labels[g[1]] else False for g in data_train.groups])
             weights = np.zeros(len(pairs))
             weights[pairs] = 1.0/(pairs+0.0).sum()
             weights[np.invert(pairs)] = 1.0/(np.invert(pairs)+0.0).sum()
-            train_sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, 600, replacement=False)
+            train_sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, 3000, replacement=True)
             train_loader = DataLoader(data_train, batch_size=batch_size, num_workers=prefetch, collate_fn=du.collate_fn_multiple_size_siamese, sampler=train_sampler, pin_memory=True)
             batch_size = 4*batch_size
 
@@ -130,14 +130,13 @@ def load_histograph_gw(data_path, triplet=False):
         # Data to pickle
         dataset_to_pickle(data_path, pickle_dir, create_graph_histograph, '.gxl')
     
-    gt_path = os.path.join(data_path, os.pardir, '00_GroundTruth', 'cv1')
+    gt_path = os.path.join(data_path, os.pardir, '00_GroundTruth', 'cv4')
     data_train = HistoGraph_train(pickle_dir, os.path.join(gt_path,'train.txt'), triplet)
     
     gallery_valid = HistoGraph(pickle_dir, os.path.join(gt_path, 'valid.txt'))
     gallery_test = HistoGraph(pickle_dir, os.path.join(gt_path, 'test.txt'))
 
     queries = HistoGraph(pickle_dir, os.path.join(gt_path, 'train.txt'), os.path.join(gt_path, 'keywords.txt'))
-    
     # Get labels to create a unique identifier
     unique_labels = np.unique(np.concatenate((queries.getlabels(), gallery_valid.getlabels(), gallery_test.getlabels())))
     ulabels_dict = {l:i for i, l in enumerate(unique_labels)}

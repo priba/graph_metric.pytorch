@@ -11,9 +11,10 @@ __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
 
 class SoftHd(nn.Module):
-    def __init__(self):
+    def __init__(self, in_sz):
         super(SoftHd, self).__init__()
-        self.ins_del_cost = nn.Parameter(torch.FloatTensor([50]))
+        self.head = nn.Linear(in_sz, 1)
+        self.ins_del_cost = nn.Parameter(torch.FloatTensor([2]))
 
     def cdist(self, set1, set2):
         ''' Pairwise Distance between two matrices
@@ -28,22 +29,21 @@ class SoftHd(nn.Module):
         
 #        dist_matrix = x_norm + y_norm - 2.0 * torch.mm(set1, y_t)
 #        return dist_matrix
-        
         xx = set1.unsqueeze(1).expand((set1.size(0), set2.size(0), set1.size(1)))
         yy = set2.unsqueeze(0).expand_as(xx)
-        dxy = (xx-yy).pow(2).sum(-1).sqrt()
-        return dxy
+#        dxy = self.head((xx-yy).abs()).squeeze()
+        return (xx - yy).pow(2).sum(-1).sqrt()
 
 
     def soft_hausdorff(self, set1, connections1, set2, connections2):
         dist_matrix = self.cdist(set1, set2)
 
         # Insertions and delitions
-#        dist_matrix = torch.cat([dist_matrix, (self.ins_del_cost*connections1).unsqueeze(1)], dim=1)
-#        zero_diagonal = torch.zeros(1)
-#        if dist_matrix.is_cuda:
-#            zero_diagonal = zero_diagonal.cuda()
- #       dist_matrix = torch.cat([dist_matrix, torch.cat([self.ins_del_cost*connections2, zero_diagonal]).unsqueeze(0)], dim=0)
+        dist_matrix = torch.cat([dist_matrix, (self.ins_del_cost*connections1).unsqueeze(1)], dim=1)
+        zero_diagonal = torch.zeros(1)
+        if dist_matrix.is_cuda:
+            zero_diagonal = zero_diagonal.cuda()
+        dist_matrix = torch.cat([dist_matrix, torch.cat([self.ins_del_cost*connections2, zero_diagonal]).unsqueeze(0)], dim=0)
         # \sum_{a\in set1} \inf_{b_\in set2} d(a,b)
         a, indA = dist_matrix.min(0)
         a = a.sum()
@@ -52,8 +52,8 @@ class SoftHd(nn.Module):
         b, indB = dist_matrix.min(1)
         b = b.sum()
         d = a + b
-        d = d/(set1.shape[0] + set2.shape[0])
-        
+        d = d/2.0
+        d = d/min(dist_matrix.shape)
         return d, indB, indA
 
 

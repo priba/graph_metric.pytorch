@@ -102,7 +102,7 @@ def main():
 
     print('Create model')
     net = models.GNN(in_size, args.out_size, nlayers=args.nlayers, hid=args.hidden, J=args.pow) 
-    distNet = distance.SoftHd()
+    distNet = distance.SoftHd(args.out_size)
     
     optimizer = torch.optim.SGD(list(net.parameters())+list(distNet.parameters()), args.learning_rate, momentum=args.momentum, weight_decay=args.decay, nesterov=True)
 
@@ -168,6 +168,7 @@ def main():
             print('Best model at epoch {epoch} and acc {acc}%'.format(epoch=checkpoint['epoch'],acc=checkpoint['best_perf']))
 
     print('***Test***')
+    test(valid_loader, valid_gallery_loader, [net, distNet], args.cuda)
     test(test_loader, test_gallery_loader, [net, distNet], args.cuda)
 
 if __name__ == '__main__':
