@@ -32,7 +32,7 @@ class SoftHd(nn.Module):
         xx = set1.unsqueeze(1).expand((set1.size(0), set2.size(0), set1.size(1)))
         yy = set2.unsqueeze(0).expand_as(xx)
 #        dxy = self.head((xx-yy).abs()).squeeze()
-        return (xx - yy).pow(2).sum(-1).sqrt()
+        return (xx - yy).pow(2).sum(-1)
 
 
     def soft_hausdorff(self, set1, connections1, set2, connections2):
@@ -70,15 +70,15 @@ class SoftHd(nn.Module):
         if x1.is_cuda:
             oneVec1, oneVec2 = oneVec1.cuda(), oneVec2.cuda()
         
-        if am1._nnz() == 0:
-            conn1 = oneVec1
-        else:
-            conn1 = torch.sparse.mm(am1, oneVec1) + oneVec1
+        #if am1._nnz() == 0:
+        #    conn1 = oneVec1
+        #else:
+        conn1 = torch.sparse.mm(am1, oneVec1)
 
-        if am2._nnz() == 0:
-            conn2 = oneVec2
-        else:
-            conn2 = torch.sparse.mm(am2, oneVec2) + oneVec2
+        #if am2._nnz() == 0:
+        #    conn2 = oneVec2
+        #else:
+        conn2 = torch.sparse.mm(am2, oneVec2)
 
         conn1, conn2 = conn1.squeeze(), conn2.squeeze()
 
