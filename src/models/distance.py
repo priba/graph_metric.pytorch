@@ -70,15 +70,15 @@ class SoftHd(nn.Module):
         if x1.is_cuda:
             oneVec1, oneVec2 = oneVec1.cuda(), oneVec2.cuda()
         
-        #if am1._nnz() == 0:
-        #    conn1 = oneVec1
-        #else:
-        conn1 = torch.sparse.mm(am1, oneVec1)
+        if am1._nnz() == 0:
+            conn1 = oneVec1
+        else:
+            conn1 = torch.sparse.mm(am1, oneVec1) + oneVec1
 
-        #if am2._nnz() == 0:
-        #    conn2 = oneVec2
-        #else:
-        conn2 = torch.sparse.mm(am2, oneVec2)
+        if am2._nnz() == 0:
+            conn2 = oneVec2
+        else:
+            conn2 = torch.sparse.mm(am2, oneVec2) + oneVec2
 
         conn1, conn2 = conn1.squeeze(), conn2.squeeze()
 

@@ -48,7 +48,7 @@ class GNN(nn.Module):
         #x = nn.Sigmoid()(x)
         # x = x / x.pow(2).sum(1, keepdim=True).sqrt()
         # W[0] contains the learned values of Win
-        return (x, Win, g_size)
+        return (x, W[0], g_size)
 
     def _wid(self, s):
         # Identity matrix (self connections) of size s
