@@ -103,8 +103,10 @@ def main():
     print('Create model')
     net = models.GNN(in_size, args.out_size, nlayers=args.nlayers, hid=args.hidden, J=args.pow) 
     distNet = distance.SoftHd(args.out_size)
+    #distNet = distance.Wasserstein()
     
-    optimizer = torch.optim.SGD(list(net.parameters())+list(distNet.parameters()), args.learning_rate, momentum=args.momentum, weight_decay=args.decay, nesterov=True)
+    optimizer = torch.optim.Adam(list(net.parameters())+list(distNet.parameters()), args.learning_rate, weight_decay=args.decay)
+    # optimizer = torch.optim.SGD(list(net.parameters())+list(distNet.parameters()), args.learning_rate, momentum=args.momentum, weight_decay=args.decay, nesterov=True)
 
     print('Check CUDA')
     if args.cuda and args.ngpu > 1:

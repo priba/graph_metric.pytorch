@@ -6,6 +6,7 @@
 
 import torch
 import torch.nn as nn
+from fml.functional import pairwise_distances, sinkhorn
 
 __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
@@ -13,7 +14,6 @@ __email__ = "priba@cvc.uab.cat"
 class SoftHd(nn.Module):
     def __init__(self, in_sz):
         super(SoftHd, self).__init__()
-        self.head = nn.Linear(in_sz, 1)
         self.ins_del_cost = nn.Parameter(torch.FloatTensor([2]))
 
     def cdist(self, set1, set2):
@@ -23,15 +23,10 @@ class SoftHd(nn.Module):
         Output: dist is a NxM matrix where dist[i,j] is the square norm between x[i,:] and y[j,:]
         Source: https://discuss.pytorch.org/t/efficient-distance-matrix-computation/9065/2
         '''
-#        x_norm = (set1**2).sum(1).view(-1, 1)
-#        y_t = set2.t()
-#        y_norm = (set2**2).sum(1).view(1, -1)
-        
-#        dist_matrix = x_norm + y_norm - 2.0 * torch.mm(set1, y_t)
-#        return dist_matrix
+
         xx = set1.unsqueeze(1).expand((set1.size(0), set2.size(0), set1.size(1)))
         yy = set2.unsqueeze(0).expand_as(xx)
-#        dxy = self.head((xx-yy).abs()).squeeze()
+
         return (xx - yy).pow(2).sum(-1)
 
 
@@ -53,7 +48,7 @@ class SoftHd(nn.Module):
         b = b.sum()
         d = a + b
         d = d/2.0
-        d = d/min(dist_matrix.shape)
+        # d = d/min(dist_matrix.shape)
         return d, indB, indA
 
 
@@ -99,5 +94,83 @@ class SoftHd(nn.Module):
             else:
                 raise NameError(mode + ' not implemented!')
             start2 = start2 + sz2[i]
+        return d
+
+
+class Wasserstein(nn.Module):
+    def __init__(self):
+        super(Wasserstein, self).__init__()
+        self.ins_del_cost = nn.Parameter(torch.FloatTensor([2]))
+
+    def forward(self, g1, g2, mode='pairs'):
+        ''' mode:   'pairs' expect paired graphs, same for g1 and g2.
+                    'retrieval' g1 is just one graph and computes the distance against all graphs in g2
+        '''
+        x1, am1, sz1 = g1
+        x2, am2, sz2 = g2
+        
+        
+        oneVec1 = torch.ones(am1.shape[1]).unsqueeze(1)
+        oneVec2 = torch.ones(am2.shape[1]).unsqueeze(1)
+        if x1.is_cuda:
+            oneVec1, oneVec2 = oneVec1.cuda(), oneVec2.cuda()
+        
+        if am1._nnz() == 0:
+            conn1 = oneVec1
+        else:
+            conn1 = torch.sparse.mm(am1, oneVec1) + oneVec1
+
+        if am2._nnz() == 0:
+            conn2 = oneVec2
+        else:
+            conn2 = torch.sparse.mm(am2, oneVec2) + oneVec2
+
+        conn1, conn2 = conn1.squeeze(), conn2.squeeze()
+
+        bz = sz2.shape[0] # Batch Size
+
+        d = torch.zeros(bz)
+        if x1.is_cuda:
+            d = d.cuda()
+
+        start1 = 0
+        start2 = 0
+
+        set1 = torch.zeros((sz2.size(0), sz1.max(), x1.size(-1)), device=x1.device)
+        set2 = torch.zeros((sz2.size(0), sz2.max(), x2.size(-1)), device=x2.device)
+        a = torch.ones(set1.shape[0:2],
+                       requires_grad=False,
+                       device=set1.device)
+
+        b = torch.ones(set2.shape[0:2],
+                       requires_grad=False,
+                       device=set2.device)
+
+        for i in range(bz):
+            if mode == 'retrieval':
+                set1[i] = x1
+            else:
+                set1[i,:sz1[i]] = x1[start1:start1+sz1[i]]
+                a[i,sz1[i]:] = 0
+                start1 = start1 + sz1[i]
+
+            set2[i,:sz2[i]] = x2[start2:start2+sz2[i]]
+            b[i,sz2[i]:] = 0
+
+            start2 = start2 + sz2[i]
+
+        b = b * a.sum(1, keepdim=True) / b.sum(1, keepdim=True)
+        if mode == 'retrieval':
+            steps = [i for i in range(0, bz, 128)] + [bz]
+            d = []
+            for i in range(len(steps)-1):
+                M = pairwise_distances(set1[steps[i]:steps[i+1]], set2[steps[i]:steps[i+1]])
+                P = sinkhorn(a[steps[i]:steps[i+1]], b[steps[i]:steps[i+1]], M, 1e-3, max_iters=500, stop_thresh=1e-3)
+                d.append((M * P).sum((1,2)))
+            d = torch.cat(d)
+        else:
+            M = pairwise_distances(set1, set2, p=2)
+            P = sinkhorn(a, b, M.detach(), 1e-3, max_iters=500, stop_thresh=1e-1)
+            d = (M * P).sum((1,2))
         return d
 

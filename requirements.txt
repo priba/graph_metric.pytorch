@@ -7,3 +7,4 @@ tensorboardX
 sklearn
 joblib
 tqdm
+git+https://github.com/fwilliams/fml

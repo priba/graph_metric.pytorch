@@ -119,7 +119,7 @@ class GNN_Orig(nn.Module):
         # Last layer
         W = self.wc_last(x, Win)
         x = self.fc_last(x)
-        x = nn.Sigmoid()(x)
+#        x = nn.Sigmoid()(x)
         # x = x / x.pow(2).sum(1, keepdim=True).sqrt()
         # W[0] contains the learned values of Win
         return (x, Win, g_size)
