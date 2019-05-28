@@ -14,9 +14,9 @@ class SoftHd(nn.Module):
     def __init__(self, in_sz):
         super(SoftHd, self).__init__()
         self.head = nn.Linear(in_sz, 1)
-        self.ins_del_cost = nn.Parameter(torch.FloatTensor([2]))
+        self.ins_del_cost = nn.Parameter(torch.FloatTensor([5]))
 
-    def cdist(self, set1, set2):
+    def cdist(self, set1, set2, p=1.0):
         ''' Pairwise Distance between two matrices
         Input:  x is a Nxd matrix
                 y is an optional Mxd matirx
@@ -32,18 +32,18 @@ class SoftHd(nn.Module):
         xx = set1.unsqueeze(1).expand((set1.size(0), set2.size(0), set1.size(1)))
         yy = set2.unsqueeze(0).expand_as(xx)
 #        dxy = self.head((xx-yy).abs()).squeeze()
-        return (xx - yy).pow(2).sum(-1)
+        return (xx - yy).abs().pow(p).sum(-1)
 
 
     def soft_hausdorff(self, set1, connections1, set2, connections2):
-        dist_matrix = self.cdist(set1, set2)
+        dist_matrix = self.cdist(set1, set2, p=2)
 
         # Insertions and delitions
-        dist_matrix = torch.cat([dist_matrix, (self.ins_del_cost*connections1).unsqueeze(1)], dim=1)
-        zero_diagonal = torch.zeros(1)
-        if dist_matrix.is_cuda:
-            zero_diagonal = zero_diagonal.cuda()
-        dist_matrix = torch.cat([dist_matrix, torch.cat([self.ins_del_cost*connections2, zero_diagonal]).unsqueeze(0)], dim=0)
+        #dist_matrix = torch.cat([dist_matrix, (self.ins_del_cost*connections1).unsqueeze(1)], dim=1)
+        #zero_diagonal = torch.zeros(1)
+        #if dist_matrix.is_cuda:
+        #    zero_diagonal = zero_diagonal.cuda()
+        #dist_matrix = torch.cat([dist_matrix, torch.cat([self.ins_del_cost*connections2, zero_diagonal]).unsqueeze(0)], dim=0)
         # \sum_{a\in set1} \inf_{b_\in set2} d(a,b)
         a, indA = dist_matrix.min(0)
         a = a.sum()
@@ -52,7 +52,6 @@ class SoftHd(nn.Module):
         b, indB = dist_matrix.min(1)
         b = b.sum()
         d = a + b
-        d = d/2.0
         d = d/min(dist_matrix.shape)
         return d, indB, indA
 

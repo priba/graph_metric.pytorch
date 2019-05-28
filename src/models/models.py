@@ -2,9 +2,9 @@ import torch
 import torch.nn as nn
 from .layers import GConv, EdgeCompute, Block
 
-class GNN(nn.Module):
+class GNN_Orig(nn.Module):
     def __init__(self, in_feat, out_feat, nlayers=3, hid=256, dropout=True, J=2):
-        super(GNN, self).__init__()
+        super(GNN_Orig, self).__init__()
         self.nlayers = nlayers
         self.hid = hid
  
@@ -16,8 +16,8 @@ class GNN(nn.Module):
 
         self.block1 = Block(64, 64, J=self.J)
         self.block2 = Block(64, 64, J=self.J)
-#        self.block3 = Block(64, 128, J=self.J)
-#        self.block4 = Block(128, 128, J=self.J)
+        self.block3 = Block(64, 128, J=self.J)
+        self.block4 = Block(128, 128, J=self.J)
 
         # Last operation to map to output size
         self.wc_last = EdgeCompute(64, 32, J=self.J)
@@ -39,13 +39,13 @@ class GNN(nn.Module):
 
         x = self.block1(x, Wid, Win)
         x = self.block2(x, Wid, Win)
-#        x = self.block3(x, Wid, Win)
-#        x = self.block4(x, Wid, Win)
+        x = self.block3(x, Wid, Win)
+        x = self.block4(x, Wid, Win)
 
         # Last layer
         W = self.wc_last(x, Win)
         x = self.fc_last(x)
-        #x = nn.Sigmoid()(x)
+        x = nn.Tanh()(x)
         # x = x / x.pow(2).sum(1, keepdim=True).sqrt()
         # W[0] contains the learned values of Win
         return (x, W[0], g_size)
@@ -60,9 +60,9 @@ class GNN(nn.Module):
         return Wid
 
 
-class GNN_Orig(nn.Module):
-    def __init__(self, in_feat, out_feat, nlayers=3, hid=256, dropout=True, J=2):
-        super(GNN_Orig, self).__init__()
+class GNN(nn.Module):
+    def __init__(self, in_feat, out_feat, nlayers=3, hid=256, dropout=True, J=5):
+        super(GNN, self).__init__()
         self.nlayers = nlayers
         self.hid = hid
  
@@ -73,20 +73,21 @@ class GNN_Orig(nn.Module):
 
         # Last operation to map to output size
         self.wc_start = EdgeCompute(self.hid, self.hid, J=self.J)
-        self.gc_start = GConv(self.hid, self.hid, J=self.J)
+        self.gc_start = GConv(self.hid, self.hid, J=self.J, bn_bool=True)
 
-        for i in range(1, nlayers):
+        for i in range(1, nlayers-1):
             # Compute learned connections up to order self.J
             module_wc = EdgeCompute(self.hid, self.hid, J=self.J)
             self.add_module('wc{}'.format(i), module_wc)
             
             # Graph convolution
-            module_gc = GConv(self.hid, self.hid, J=self.J)
+            module_gc = GConv(self.hid, self.hid, J=self.J, bn_bool=True)
             self.add_module('gc{}'.format(i), module_gc)
 
         # Last operation to map to output size
         self.wc_last = EdgeCompute(self.hid, self.hid, J=self.J)
-        self.fc_last = nn.Linear(self.hid, out_feat, bias=False)
+        self.fc_last = GConv(self.hid, out_feat, J=self.J, bn_bool=False)
+        # self.fc_last = nn.Linear(self.hid, out_feat, bias=True)
         
         self.dropout = nn.Dropout(0.3)
         self.nl = nn.ReLU()
@@ -102,7 +103,7 @@ class GNN_Orig(nn.Module):
         
         W = self.wc_start(x, Win)
         x = self.dropout(self.nl(self.gc_start(x, Wid + W)))
-        for i in range(1, self.nlayers):
+        for i in range(1, self.nlayers-1):
             # List of adjacency information up to order self.J
             W = self._modules['wc{}'.format(i)](x, Win)
 
@@ -118,8 +119,8 @@ class GNN_Orig(nn.Module):
 
         # Last layer
         W = self.wc_last(x, Win)
-        x = self.fc_last(x)
-        x = nn.Sigmoid()(x)
+        x = self.fc_last(x, Wid + W)
+        # x = nn.Sigmoid()(x)
         # x = x / x.pow(2).sum(1, keepdim=True).sqrt()
         # W[0] contains the learned values of Win
         return (x, Win, g_size)

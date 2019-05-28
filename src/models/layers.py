@@ -65,7 +65,7 @@ class EdgeCompute(nn.Module):
                     nn.Linear(self.in_features, self.hid),
                     nn.ReLU(),
                     nn.Linear(self.hid, 1),
-                    nn.Sigmoid()
+#                    nn.Sigmoid()
                     )
             self.add_module('mlp{}'.format(i), module_mlp)
 
@@ -76,7 +76,7 @@ class EdgeCompute(nn.Module):
                 Wnew.append(W)
         else:
             for i in range(1, self.J):
-                Wi = W.pow(i)
+                Wi = W #.pow(i)
                 indices = Wi._indices()
                 data = Wi._values()
                 x_diff = x[indices[0]] - x[indices[1]]

@@ -44,16 +44,17 @@ class HistoGraph_train(data.Dataset):
         target2 = self.labels[ind[1]]
 
         if self.triplet:
-            len_sim = [len(s)-len(target1) for s in self.labels]
-            len_sim = 1/ (1 + abs(np.array(len_sim)))
-            
+           
+            labels_counts = np.array([(l==self.labels).sum() for l in self.labels])
             possible_ind = np.where(self.labels!=target1)[0] 
-            len_sim = len_sim[possible_ind]
-            len_sim = len_sim / len_sim.sum()
-            neg_ind = np.random.choice(possible_ind, 1, p=len_sim)
-            
+            labels_counts = labels_counts[possible_ind]
+            labels_probs = 1/labels_counts
+            labels_probs = labels_probs/labels_probs.sum()
+            neg_ind = np.random.choice(possible_ind, 1, p=labels_probs) 
+
             # Graph 3
             node_labels3, am3 = self._loadgraph(neg_ind[0])
+            target_neg = self.labels[neg_ind[0]]
             return (node_labels1, am1), (node_labels2, am2), (node_labels3, am3), torch.Tensor([])
 
         target = torch.FloatTensor([0.0]) if target1 == target2 else torch.FloatTensor([1.0])
