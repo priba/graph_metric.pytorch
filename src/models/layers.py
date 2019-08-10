@@ -26,14 +26,11 @@ class GConv(nn.Module):
     def forward(self, x, W):
         output = []
         for w in W:
-            if w._nnz()==0:
-                out = torch.zeros(x.shape)
-                if x.is_cuda:
-                    out = out.cuda()
-                output.append(out)
-            else:
-                output.append(torch.sparse.mm(w, x))
+            output_mm = torch.sparse.mm(w, x)
+            output.append(output_mm.view(x.shape[0], -1, output_mm.shape[-1]))
         output = torch.cat(output, dim=1)
+        output = torch.cat(torch.split(output,1, dim=1), dim=2).squeeze()
+
         output = self.fc(output)
 
         if self.bn_bool:
@@ -57,32 +54,34 @@ class EdgeCompute(nn.Module):
         super(EdgeCompute, self).__init__()
         self.in_features = in_features
         self.hid = hid
-        self.J = J
+        self.J = J - 1
+
+        self.J_range = torch.arange(0,self.J).unsqueeze(0)
 
         # Define a network per each order in the adjacency matrix
-        for i in range(1, self.J):
-            module_mlp = nn.Sequential(
-                    nn.Linear(self.in_features, self.hid),
-                    nn.ReLU(),
-                    nn.Linear(self.hid, 1),
-#                    nn.Sigmoid()
-                    )
-            self.add_module('mlp{}'.format(i), module_mlp)
+        self.mlp = nn.Sequential(
+                nn.Linear(self.in_features, self.hid),
+                nn.ReLU(),
+                nn.Linear(self.hid, self.J),
+                nn.Sigmoid()
+                )
 
     def forward(self, x, W):
-        Wnew = []
         if W._nnz() == 0:
-            for i in range(1, self.J):
-                Wnew.append(W)
+            Wnew = torch.sparse.FloatTensor(self.J*W.shape[0], W.shape[1]).to(W)
         else:
-            for i in range(1, self.J):
-                Wi = W #.pow(i)
-                indices = Wi._indices()
-                data = Wi._values()
-                x_diff = x[indices[0]] - x[indices[1]]
-                data = self._modules['mlp{}'.format(i)](x_diff.abs()).squeeze()
-                Wnew.append(ValuesToSparse.apply(indices, data, W.shape))
-        return Wnew
+            indices = W._indices()
+            data = W._values()
+            x_diff = x[indices[0]] - x[indices[1]]
+            data = self.mlp(x_diff.abs())
+
+            indices = indices.unsqueeze(-1).expand(*indices.shape, self.J)
+            indices_aux = W.shape[0]*self.J_range.to(indices) + indices[0]
+            indices = torch.stack((indices_aux, indices[1]))
+            indices = indices.view(indices.shape[0],-1)
+            data = data.view(-1)
+            Wnew = ValuesToSparse.apply(indices, data, (self.J*W.shape[0], W.shape[1]))
+        return [Wnew]
 
     def __repr__(self):
         return self.__class__.__name__ + '(in_features=' \
