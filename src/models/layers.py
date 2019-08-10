@@ -27,9 +27,8 @@ class GConv(nn.Module):
         output = []
         for w in W:
             output_mm = torch.sparse.mm(w, x)
-            output.append(output_mm.view(x.shape[0], -1, output_mm.shape[-1]))
+            output.append(torch.cat(output_mm.split(x.shape[0]), dim=1))
         output = torch.cat(output, dim=1)
-        output = torch.cat(torch.split(output,1, dim=1), dim=2).squeeze()
 
         output = self.fc(output)
 

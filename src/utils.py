@@ -90,7 +90,7 @@ def mean_average_precision(dist_matrix, target_gallery, target_query):
     nq = target_query.shape[0]
 
     # Distance to similarity
-    sim = 1./(1+dist_matrix)
+    sim = (1+dist_matrix.max()) - dist_matrix
 
     # Relevant items
     str_sim = (np.expand_dims(target_query, axis=1) == np.expand_dims(target_gallery, axis=0)) * 1
