@@ -87,7 +87,7 @@ class GNN(nn.Module):
         #    self.add_module('gc{}'.format(i), module_gc)
 
         # Last operation to map to output size
-        self.gc0 = GConv(self.hid, self.hid, J=3*self.J - 2, bn_bool=False)
+        self.gc0 = GConv(self.hid, self.hid, J=3*self.J + 1, bn_bool=False)
         self.fc_last = nn.Linear(self.hid, out_feat)
         
         self.dropout = nn.Dropout(0.3)

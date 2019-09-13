@@ -53,7 +53,7 @@ class EdgeCompute(nn.Module):
         super(EdgeCompute, self).__init__()
         self.in_features = in_features
         self.hid = hid
-        self.J = J - 1
+        self.J = J
 
         self.J_range = torch.arange(0,self.J).unsqueeze(0)
 
