@@ -19,6 +19,7 @@ from utils import load_checkpoint, graph_cuda, graph_to_sparse, graph_cat, knn_a
 from models import models, distance
 from data.load_data import load_data
 from loss.contrastive import ContrastiveLoss, TripletLoss
+import dgl
 
 __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
@@ -42,29 +43,27 @@ def test(data_loader, gallery_loader, nets, cuda):
         g_gallery = []
         target_gallery = []
         for j, (g, target) in enumerate(gallery_loader):
-            g = graph_to_sparse(g)
             if cuda:
-                g = graph_cuda(g)
+                g.ndata['h'] = g.ndata['h'].cuda()
 
             # Output
-            g_out  = net(g)
+            g = net(g)
 
             target_gallery.append(target)
-            g_gallery.append(g_out)
+            g_gallery.append(g)
 
         target_gallery = np.array(np.concatenate(target_gallery))
-        g_gallery = graph_cat(g_gallery)
+        g_gallery = dgl.batch(g_gallery)
 
         target_query = []
         for i, (g, target) in enumerate(data_loader):
-            g = graph_to_sparse(g)
             # Prepare input data
             if cuda:
-                g = graph_cuda(g)
+                g.ndata['h'] = g.ndata['h'].cuda()
         
             # Output
-            g_out  = net(g)
-            d = distance(g_out, g_gallery, mode='retrieval')
+            g  = net(g)
+            d = distance(g, g_gallery, mode='retrieval')
             
             dist_matrix.append(d)
             target_query.append(target)

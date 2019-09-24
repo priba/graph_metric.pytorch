@@ -8,6 +8,7 @@ from . import data_utils as du
 import os
 import itertools
 import pickle
+import dgl
 
 __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
@@ -36,15 +37,15 @@ class HistoGraph_train(data.Dataset):
         ind = self.groups[index]
 
         # Graph 1
-        node_labels1, am1 = self._loadgraph(ind[0])
+        g1 = self._loadgraph(ind[0])
         target1 = self.labels[ind[0]]
 
         # Graph 2
-        node_labels2, am2 = self._loadgraph(ind[1])
+        g2 = self._loadgraph(ind[1])
         target2 = self.labels[ind[1]]
 
         if self.triplet:
-           
+            # Random negative choice where it would be of similar size
             labels_counts = np.array([(l==self.labels).sum() for l in self.labels])
             possible_ind = np.where(self.labels!=target1)[0] 
             labels_counts = labels_counts[possible_ind]
@@ -53,19 +54,28 @@ class HistoGraph_train(data.Dataset):
             neg_ind = np.random.choice(possible_ind, 1, p=labels_probs) 
 
             # Graph 3
-            node_labels3, am3 = self._loadgraph(neg_ind[0])
+            g3 = self._loadgraph(neg_ind[0])
             target_neg = self.labels[neg_ind[0]]
-            return (node_labels1, am1), (node_labels2, am2), (node_labels3, am3), torch.Tensor([])
+
+            return g1, g2, g3, torch.Tensor([])
 
         target = torch.FloatTensor([0.0]) if target1 == target2 else torch.FloatTensor([1.0])
-        return (node_labels1, am1), (node_labels2, am2), torch.Tensor([]), target
+        return g1, g2, torch.Tensor([]), target
 
     def __len__(self):
         return len(self.groups)
 
     def _loadgraph(self, i):
         graph_dict = pickle.load( open(os.path.join(self.root, self.graphs[i]), "rb") )
-        return graph_dict['node_labels'], graph_dict['am']
+
+        g = dgl.DGLGraph()
+        
+        g.add_nodes(graph_dict['node_labels'].shape[0])
+        g.ndata['h'] = torch.tensor(graph_dict['node_labels']).float()
+
+        g.add_edges(graph_dict['am'][0], graph_dict['am'][1])
+
+        return g
 
 
 class HistoGraph(data.Dataset):
@@ -90,18 +100,25 @@ class HistoGraph(data.Dataset):
 
     def __getitem__(self, index):
         # Graph
-        node_labels, am = self._loadgraph(index)
-        #target = self.labels_dict[self.labels[index]]
+        g = self._loadgraph(index)
         target = self.labels[index]
 
-        return (node_labels, am), target
+        return g, target
 
     def __len__(self):
         return len(self.labels)
 
     def _loadgraph(self, i):
         graph_dict = pickle.load( open(os.path.join(self.root, self.graphs[i]), "rb") )
-        return graph_dict['node_labels'], graph_dict['am']
+
+        g = dgl.DGLGraph()
+        
+        g.add_nodes(graph_dict['node_labels'].shape[0])
+        g.ndata['h'] = torch.tensor(graph_dict['node_labels']).float()
+
+        g.add_edges(graph_dict['am'][0], graph_dict['am'][1])
+
+        return g
 
     def getlabels(self):
         return np.unique(self.labels)

@@ -4,13 +4,13 @@ Graph Metric Learning in PyTorch.
 
 ## Install
 
-- Install (Virtualenv)[https://virtualenv.pypa.io/en/stable/].
-    $ [sudo] pip install virtualenv
+- Install all the requirements. 
+    $ conda env create -f environment.yml
 
-- Install all the requirements. Note that the following script will automatically creates a virtualenvironment, therefore if (Virtualenv)[https://virtualenv.pypa.io/en/stable/] is not installed, sudo is required.  
-    $ [sudo] ./install.sh
 
 ## Usage
+
+    $ conda activate graphmetric
 
 ### Train
 

@@ -1,9 +1,0 @@
-scipy
-torch
-torchvision
-tensorflow
-tensorboard
-tensorboardX
-sklearn
-joblib
-tqdm

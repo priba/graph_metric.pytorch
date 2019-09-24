@@ -14,7 +14,7 @@ import os
 import glob
 import re
 from tqdm import tqdm
-import pickle
+import _pickle as pickle
 import sys
 
 __author__ = "Pau Riba"

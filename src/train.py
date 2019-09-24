@@ -36,6 +36,7 @@ def adjust_learning_rate(optimizer, epoch):
 
 def train(data_loader, nets, optimizer, cuda, criterion, epoch):
     batch_time = LogMetric.AverageMeter()
+    batch_load_time = LogMetric.AverageMeter()
     losses = LogMetric.AverageMeter()
 
     net, distNet = nets
@@ -45,43 +46,41 @@ def train(data_loader, nets, optimizer, cuda, criterion, epoch):
 
     end = time.time()
     for i, (g1, g2, g3, target) in enumerate(data_loader):
-        g1, g2 = graph_to_sparse(g1), graph_to_sparse(g2)
-        if args.triplet:
-            g3 = graph_to_sparse(g3)
         # Prepare input data
         if cuda:
-            g1, g2 = graph_cuda(g1), graph_cuda(g2)
+            g1.ndata['h'], g2.ndata['h'] = g1.ndata['h'].cuda(), g2.ndata['h'].cuda()
             if args.triplet:
-                g3 = graph_cuda(g3)
+                g3.ndata['h'] = g3.ndata['h'].cuda()
             else:
                 target = target.cuda()
         
+        batch_load_time.update(time.time() - end)
         optimizer.zero_grad()
         
         # Output
-        g1_out = net(g1)
-        g2_out = net(g2)
+        g1 = net(g1)
+        g2 = net(g2)
 
         if args.triplet:
-            g3_out = net(g3)
-            loss = criterion(g1_out, g2_out, g3_out, distNet)
+            g3 = net(g3)
+            loss = criterion(g1, g2, g3, distNet)
         else:
-            loss = criterion(g1_out, g2_out, target, distNet)
+            loss = criterion(g1, g2, target, distNet)
         
         # Gradiensts and update
         loss.backward()
         optimizer.step()
         
         # Save values
-        losses.update(loss.item(), g1[2].size(0))
+        losses.update(loss.item(), g1.batch_size)
         batch_time.update(time.time() - end)
         end = time.time()
 
         if i > 0 and i%args.log_interval == 0:
-            print('Epoch: [{0}]({1}/{2}) Average Loss {loss.avg:.3f}; Avg Time x Batch {b_time.avg:.3f}'
-                    .format(epoch, i, len(data_loader), loss=losses, b_time=batch_time))
-    print('Epoch: [{0}] Average Loss {loss.avg:.3f}; Avg Time x Batch {b_time.avg:.3f}'
-            .format(epoch, loss=losses, b_time=batch_time))
+            print('Epoch: [{0}]({1}/{2}) Average Loss {loss.avg:.3f}; Avg Time x Batch {b_time.avg:.3f} Avg Load Time x Batch {b_load_time.avg:.3f}'
+                    .format(epoch, i, len(data_loader), loss=losses, b_time=batch_time, b_load_time=batch_load_time))
+    print('Epoch: [{0}] Average Loss {loss.avg:.3f}; Avg Time x Batch {b_time.avg:.3f} Avg Time x Batch {b_load_time.avg:.3f}'
+            .format(epoch, loss=losses, b_time=batch_time, b_load_time=batch_load_time))
     return losses
 
 
@@ -101,7 +100,7 @@ def main():
     train_loader, valid_loader, valid_gallery_loader, test_loader, test_gallery_loader, in_size = load_data(args.dataset, args.data_path, triplet=args.triplet, batch_size=args.batch_size, prefetch=args.prefetch)
 
     print('Create model')
-    net = models.GNN(in_size, args.out_size, nlayers=args.nlayers, hid=args.hidden, J=args.pow) 
+    net = models.GNN(in_size, args.hidden, args.out_size) 
     distNet = distance.SoftHd(args.out_size)
     
     optimizer = torch.optim.SGD(list(net.parameters())+list(distNet.parameters()), args.learning_rate, momentum=args.momentum, weight_decay=args.decay, nesterov=True)

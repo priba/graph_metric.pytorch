@@ -1,0 +1,19 @@
+name: graphmetric
+channels:
+        - conda-forge
+        - pytorch
+        - dglteam
+        - defaults
+dependencies:
+        - python=3.6
+        - numpy
+        - pytorch=1.0
+        - torchvision
+        - tensorflow
+        - tensorboard
+        - tensorboardX
+        - dgl-cuda10.0 
+        - scipy
+        - scikit-learn
+        - joblib
+        - tqdm
