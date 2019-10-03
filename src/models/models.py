@@ -69,13 +69,15 @@ class GNN(nn.Module):
     def __init__(self, in_dim, hidden_dim, out_dim, heads=4): 
         super(GNN, self).__init__()
         self.layers = nn.ModuleList([
-            GATConv(in_dim, hidden_dim, heads, activation=F.elu),
-            GATConv(heads*hidden_dim, hidden_dim, 4, activation=F.elu)])
+            GATConv(in_dim, hidden_dim, heads, activation=F.relu),
+            GATConv(heads*hidden_dim, hidden_dim, 4, activation=F.relu)])
 
         self.last_layer = GATConv(heads*hidden_dim, out_dim, 4)
 
     def forward(self, g):
         h = g.ndata['h']
+
+
         for conv in self.layers:
             h = conv(g, h)
             h = h.view(h.shape[0], -1)
@@ -85,3 +87,4 @@ class GNN(nn.Module):
 
         g.ndata['h'] = h
         return g
+

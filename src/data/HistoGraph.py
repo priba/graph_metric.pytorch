@@ -75,6 +75,7 @@ class HistoGraph_train(data.Dataset):
 
         g.add_edges(graph_dict['am'][0], graph_dict['am'][1])
 
+        g.add_edges(g.nodes(), g.nodes())
         return g
 
 
@@ -118,6 +119,7 @@ class HistoGraph(data.Dataset):
 
         g.add_edges(graph_dict['am'][0], graph_dict['am'][1])
 
+        g.add_edges(g.nodes(), g.nodes())
         return g
 
     def getlabels(self):

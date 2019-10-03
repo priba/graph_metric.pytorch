@@ -3,7 +3,6 @@ from __future__ import print_function, division
 
 import torch
 import dgl
-from . import data_utils as du
 
 """
     Useful data tools.
