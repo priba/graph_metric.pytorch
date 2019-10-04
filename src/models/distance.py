@@ -7,6 +7,7 @@
 import torch
 import dgl
 import torch.nn as nn
+import numpy as np
 
 __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
@@ -16,8 +17,9 @@ class SoftHd(nn.Module):
         super(SoftHd, self).__init__()
         self.head = nn.Linear(in_sz, 1)
         self.ins_del_cost = nn.Parameter(torch.FloatTensor([5]))
+        self.p = 2
 
-    def cdist(self, set1, set2, p=1.0):
+    def cdist(self, set1, set2, p=2.0):
         ''' Pairwise Distance between two matrices
         Input:  x is a Nxd matrix
                 y is an optional Mxd matirx
@@ -56,7 +58,6 @@ class SoftHd(nn.Module):
         '''
         g1_list = dgl.unbatch(g1)
         g2_list = dgl.unbatch(g2)
-
 
         d = []
         for i in range(len(g2_list)):
