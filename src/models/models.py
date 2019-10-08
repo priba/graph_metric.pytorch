@@ -12,7 +12,6 @@ def message_func(edges):
     return {'m': edges.src['h']}
 
 
-
 def reduce(nodes):
     """Take an average over all neighbor node features hu and use it to
     overwrite the original node feature."""
@@ -66,11 +65,13 @@ class GNN_old(nn.Module):
         return g 
 
 class GNN(nn.Module):
-    def __init__(self, in_dim, hidden_dim, out_dim, heads=4): 
+    def __init__(self, in_dim, hidden_dim, out_dim, heads=4, dropout=0.3): 
         super(GNN, self).__init__()
+
         self.layers = nn.ModuleList([
-            GATConv(in_dim, hidden_dim, heads, residual=True, activation=F.relu),
-            GATConv(heads*hidden_dim, hidden_dim, heads, feat_drop=0.3, residual=True, activation=F.relu)])
+            GATConv(in_dim, hidden_dim, heads, residual=True, activation=F.leaky_relu),
+            GATConv(heads*hidden_dim, hidden_dim, heads, feat_drop=dropout, residual=True, activation=F.leaky_relu)])
+
         self.bn = nn.ModuleList([
             nn.BatchNorm1d(heads*hidden_dim),
             nn.BatchNorm1d(heads*hidden_dim)])

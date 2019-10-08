@@ -21,7 +21,7 @@ __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
 
 
-def load_data(dataset, data_path, triplet=False, batch_size=32, prefetch=4):
+def load_data(dataset, data_path, triplet=False, batch_size=32, prefetch=4, set_partition='cv1'):
 
     if dataset == 'iam':
         data_train, data_valid, data_test, gallery = load_iam(data_path, triplet)
@@ -40,7 +40,7 @@ def load_data(dataset, data_path, triplet=False, batch_size=32, prefetch=4):
         node_size=2
         return train_loader, valid_loader, gallery_loader, test_loader, gallery_loader, node_size
     elif dataset == 'histograph-gw':
-        data_train, queries, gallery_valid, gallery_test = load_histograph_gw(data_path, triplet)
+        data_train, queries, gallery_valid, gallery_test = load_histograph_gw(data_path, triplet, set_partition=set_partition)
         print_statistics(data_train, queries, gallery_valid, queries, gallery_test)
 
         if triplet:
@@ -117,7 +117,7 @@ def load_iam(data_path, triplet=False):
     return data_train, data_valid, data_test, gallery
 
 
-def load_histograph_gw(data_path, triplet=False):
+def load_histograph_gw(data_path, triplet=False, set_partition='cv1'):
     from .HistoGraph import HistoGraph_train, HistoGraph, create_graph_histograph
     # Split path
     split = os.path.normpath(data_path).split(os.sep)
@@ -130,7 +130,7 @@ def load_histograph_gw(data_path, triplet=False):
         # Data to pickle
         dataset_to_pickle(data_path, pickle_dir, create_graph_histograph, '.gxl')
     
-    gt_path = os.path.join(data_path, os.pardir, '00_GroundTruth', 'cv1')
+    gt_path = os.path.join(data_path, os.pardir, '00_GroundTruth', set_partition)
     data_train = HistoGraph_train(pickle_dir, os.path.join(gt_path,'train.txt'), triplet)
     
     gallery_valid = HistoGraph(pickle_dir, os.path.join(gt_path, 'valid.txt'))

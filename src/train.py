@@ -97,10 +97,10 @@ def main():
         criterion = ContrastiveLoss(margin=args.margin)
     
     print('Prepare data')
-    train_loader, valid_loader, valid_gallery_loader, test_loader, test_gallery_loader, in_size = load_data(args.dataset, args.data_path, triplet=args.triplet, batch_size=args.batch_size, prefetch=args.prefetch)
+    train_loader, valid_loader, valid_gallery_loader, test_loader, test_gallery_loader, in_size = load_data(args.dataset, args.data_path, triplet=args.triplet, batch_size=args.batch_size, prefetch=args.prefetch, set_partition=args.set_partition)
 
     print('Create model')
-    net = models.GNN(in_size, args.hidden, args.out_size) 
+    net = models.GNN(in_size, args.hidden, args.out_size, dropout=args.dropout) 
     distNet = distance.SoftHd(args.out_size)
     
     optimizer = torch.optim.SGD(list(net.parameters())+list(distNet.parameters()), args.learning_rate, momentum=args.momentum, weight_decay=args.decay, nesterov=True)
@@ -145,8 +145,7 @@ def main():
             else:
                 if early_stop_counter == args.early_stop:
                     break
-                if epoch>100:
-                    early_stop_counter += 1
+                early_stop_counter += 1
 
             # Logger
             if args.log:
