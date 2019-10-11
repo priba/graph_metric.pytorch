@@ -68,8 +68,10 @@ class GNN(nn.Module):
     def __init__(self, in_dim, hidden_dim, out_dim, heads=4, dropout=0.3): 
         super(GNN, self).__init__()
 
+        self.embedding = nn.Linear(in_dim,hidden_dim)
+
         self.layers = nn.ModuleList([
-            GATConv(in_dim, hidden_dim, heads, residual=True, activation=F.leaky_relu),
+            GATConv(hidden_dim, hidden_dim, heads, feat_drop=dropout, residual=True, activation=F.leaky_relu),
             GATConv(heads*hidden_dim, hidden_dim, heads, feat_drop=dropout, residual=True, activation=F.leaky_relu)])
 
         self.bn = nn.ModuleList([
@@ -81,6 +83,7 @@ class GNN(nn.Module):
     def forward(self, g):
         h = g.ndata['h']
 
+        h = self.embedding(h)
 
         for i, conv in enumerate(self.layers):
             h = conv(g, h)
