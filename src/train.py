@@ -143,7 +143,8 @@ def main():
                 if args.save is not None:
                     save_checkpoint({'epoch': epoch + 1, 'state_dict': net.state_dict(), 'state_dict_dist': distNet.state_dict(), 'best_perf': best_perf}, directory=args.save, file_name='checkpoint')
             else:
-                if early_stop_counter == args.early_stop:
+                if early_stop_counter >= args.early_stop:
+                    print('Early Stop epoch {}'.format(epoch))
                     break
                 early_stop_counter += 1
 
