@@ -15,8 +15,7 @@ __email__ = "priba@cvc.uab.cat"
 class SoftHd(nn.Module):
     def __init__(self, in_sz):
         super(SoftHd, self).__init__()
-        self.head = nn.Linear(in_sz, 1)
-        self.ins_del_cost = nn.Parameter(torch.FloatTensor([5]))
+        self.ins_del_cost = nn.Linear(in_sz, 1)
         self.p = 2
 
     def cdist(self, set1, set2, p=2.0):
@@ -34,21 +33,19 @@ class SoftHd(nn.Module):
     def soft_hausdorff(self, g1, g2):
         dist_matrix = self.cdist(g1.ndata['h'], g2.ndata['h'], p=2)
 
-        # Insertions and delitions
-        #dist_matrix = torch.cat([dist_matrix, (self.ins_del_cost*connections1).unsqueeze(1)], dim=1)
-        #zero_diagonal = torch.zeros(1)
-        #if dist_matrix.is_cuda:
-        #    zero_diagonal = zero_diagonal.cuda()
-        #dist_matrix = torch.cat([dist_matrix, torch.cat([self.ins_del_cost*connections2, zero_diagonal]).unsqueeze(0)], dim=0)
+        d1 = self.ins_del_cost(g1.ndata['h']).abs().squeeze()
+        d2 = self.ins_del_cost(g2.ndata['h']).abs().squeeze()
+
         # \sum_{a\in set1} \inf_{b_\in set2} d(a,b)
         a, indA = dist_matrix.min(0)
-        a = a.sum()
+        a = torch.min(a/2, d2)
+        a = a.mean()
          
         # \sum_{b\in set2} \inf_{a_\in set1} d(a,b)
         b, indB = dist_matrix.min(1)
-        b = b.sum()
+        b = torch.min(b/2, d1)
+        b = b.mean()
         d = a + b
-        d = d/min(dist_matrix.shape)
         return d, indB, indA
 
 
