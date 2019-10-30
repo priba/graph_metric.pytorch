@@ -103,7 +103,8 @@ def main():
     net = models.GNN(in_size, args.hidden, args.out_size, dropout=args.dropout) 
     distNet = distance.SoftHd(args.out_size)
     
-    optimizer = torch.optim.SGD(list(net.parameters())+list(distNet.parameters()), args.learning_rate, momentum=args.momentum, weight_decay=args.decay, nesterov=True)
+    # optimizer = torch.optim.SGD(list(net.parameters())+list(distNet.parameters()), args.learning_rate, momentum=args.momentum, weight_decay=args.decay, nesterov=True)
+    optimizer = torch.optim.Adam(list(net.parameters())+list(distNet.parameters()), args.learning_rate, weight_decay=args.decay)
 
     print('Check CUDA')
     if args.cuda and args.ngpu > 1:

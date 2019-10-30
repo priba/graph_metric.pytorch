@@ -31,19 +31,19 @@ class SoftHd(nn.Module):
 
 
     def soft_hausdorff(self, g1, g2):
-        dist_matrix = self.cdist(g1.ndata['h'], g2.ndata['h'], p=2)
+        dist_matrix = self.cdist(g1.ndata['h'], g2.ndata['h'], p=2)/2.0
 
         d1 = self.ins_del_cost(g1.ndata['h']).abs().squeeze()
         d2 = self.ins_del_cost(g2.ndata['h']).abs().squeeze()
 
         # \sum_{a\in set1} \inf_{b_\in set2} d(a,b)
         a, indA = dist_matrix.min(0)
-        a = torch.min(a/2, d2)
+        a = torch.min(a, d2)
         a = a.mean()
          
         # \sum_{b\in set2} \inf_{a_\in set1} d(a,b)
         b, indB = dist_matrix.min(1)
-        b = torch.min(b/2, d1)
+        b = torch.min(b, d1)
         b = b.mean()
         d = a + b
         return d, indB, indA
