@@ -21,14 +21,15 @@ class HistoGraph_train(data.Dataset):
         self.triplet = triplet
 
         self.graphs, self.labels = getFileList(self.file_list)
-        
+
         # To pickle
         self.graphs = [g+'.p' for g in self.graphs]
-        self.labels = np.array(self.labels) 
+        self.labels = np.array(self.labels)
         self.unique_labels = np.unique(self.labels)
         if self.triplet:
             # Triplet (anchor, positive, negative)
             self.groups = [ (i, j) for i in range(len(self.labels)) for j in np.where(self.labels[i] == self.labels)[0] if i != j ]
+            self.labels_counts = np.array([(l==self.labels).sum() for l in self.labels])
         else:
             # Siamese all pairs
             self.groups = list(itertools.permutations(range(len(self.labels)), 2))
@@ -46,12 +47,11 @@ class HistoGraph_train(data.Dataset):
 
         if self.triplet:
             # Random negative choice where it would be of similar size
-            labels_counts = np.array([(l==self.labels).sum() for l in self.labels])
-            possible_ind = np.where(self.labels!=target1)[0] 
-            labels_counts = labels_counts[possible_ind]
+            possible_ind = np.where(self.labels!=target1)[0]
+            labels_counts = self.labels_counts[possible_ind]
             labels_probs = 1/labels_counts
             labels_probs = labels_probs/labels_probs.sum()
-            neg_ind = np.random.choice(possible_ind, 1, p=labels_probs) 
+            neg_ind = np.random.choice(possible_ind, 1, p=labels_probs)
 
             # Graph 3
             g3 = self._loadgraph(neg_ind[0])
@@ -69,7 +69,7 @@ class HistoGraph_train(data.Dataset):
         graph_dict = pickle.load( open(os.path.join(self.root, self.graphs[i]), "rb") )
 
         g = dgl.DGLGraph()
-        
+
         g.add_nodes(graph_dict['node_labels'].shape[0])
         g.ndata['h'] = torch.tensor(graph_dict['node_labels']).float()
 
@@ -84,16 +84,16 @@ class HistoGraph(data.Dataset):
         self.file_list = file_list
 
         self.graphs, self.labels = getFileList(self.file_list)
-        
+
         # To pickle
         self.graphs = [g+'.p' for g in self.graphs]
-        
+
         if keywords_file is not None:
             with open(keywords_file, 'r') as f:
                 queries = f.read().splitlines()
             queries = [ q.split(' ')[-1] for q in queries ]
             idx_del = [i for i, label in enumerate(self.labels) if label not in queries]
-            
+
             for index in sorted(idx_del, reverse=True):
                 del self.labels[index]
                 del self.graphs[index]
@@ -112,7 +112,7 @@ class HistoGraph(data.Dataset):
         graph_dict = pickle.load( open(os.path.join(self.root, self.graphs[i]), "rb") )
 
         g = dgl.DGLGraph()
-        
+
         g.add_nodes(graph_dict['node_labels'].shape[0])
         g.ndata['h'] = torch.tensor(graph_dict['node_labels']).float()
 
@@ -130,10 +130,10 @@ class HistoGraph(data.Dataset):
 def getFileList(file_path):
     with open(file_path, 'r') as f:
         lines = f.read().splitlines()
-    
+
     classes = []
     elements = []
-    for line in lines:        
+    for line in lines:
         f, c = line.split(' ')[:2]
         classes += [c]
         elements += [f]
