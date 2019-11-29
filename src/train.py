@@ -11,6 +11,7 @@ import glob
 import numpy as np
 import time
 import os
+import sys
 
 # Own modules
 from options import Options
@@ -103,7 +104,6 @@ def main():
     net = models.GNN(in_size, args.hidden, args.out_size, dropout=args.dropout) 
     distNet = distance.SoftHd(args.out_size)
     
-    # optimizer = torch.optim.SGD(list(net.parameters())+list(distNet.parameters()), args.learning_rate, momentum=args.momentum, weight_decay=args.decay, nesterov=True)
     optimizer = torch.optim.Adam(list(net.parameters())+list(distNet.parameters()), args.learning_rate, weight_decay=args.decay)
 
     print('Check CUDA')
@@ -170,6 +170,7 @@ def main():
     print('***Test***')
     test(valid_loader, valid_gallery_loader, [net, distNet], args.cuda)
     test(test_loader, test_gallery_loader, [net, distNet], args.cuda)
+    sys.exit()
 
 if __name__ == '__main__':
     # Parse options
@@ -201,4 +202,5 @@ if __name__ == '__main__':
         logger = LogMetric.Logger(log_dir, force=True)
 
     main()
+    sys.exit()
 
