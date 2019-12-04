@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*- 
+# -*- coding: utf-8 -*-
 from __future__ import print_function, division
 
 """
@@ -30,7 +30,7 @@ def test(data_loader, gallery_loader, nets, cuda):
     meanap = LogMetric.AverageMeter()
 
     net, distance = nets
-    
+
     # switch to test mode
     net.eval()
     distance.eval()
@@ -60,20 +60,20 @@ def test(data_loader, gallery_loader, nets, cuda):
             # Prepare input data
             if cuda:
                 g.ndata['h'] = g.ndata['h'].cuda()
-        
+
             # Output
             g  = net(g)
             d = distance(g, g_gallery, mode='retrieval')
-            
+
             dist_matrix.append(d)
             target_query.append(target)
 
         dist_matrix = torch.stack(dist_matrix)
         target_query = np.array(np.concatenate(target_query))
-    
+
         # K-NN classifier
         acc.update(knn_accuracy(dist_matrix, target_gallery, target_query, k=5))
-        
+
         # mAP retrieval
         meanap.update(mean_average_precision(dist_matrix, target_gallery, target_query))
     batch_time.update(time.time()-start)
@@ -96,9 +96,9 @@ def main():
 
     print('Prepare data')
     train_loader, valid_loader, valid_gallery_loader, test_loader, test_gallery_loader, in_size = load_data(args.dataset, args.data_path, triplet=args.triplet, batch_size=args.batch_size, prefetch=args.prefetch)
-    
+
     print('Create model')
-    net = models.GNN(in_size, args.out_size, nlayers=args.nlayers, hid=args.hidden, J=args.pow) 
+    net = models.GNN(in_size, args.out_size, nlayers=args.nlayers, hid=args.hidden, J=args.pow)
     distNet = distance.SoftHd()
 
     print('Check CUDA')
@@ -130,7 +130,7 @@ if __name__ == '__main__':
     # Parse options
     args = Options().parse()
     print('Parameters:\t' + str(args))
-    
+
     # Check cuda & Set random seed
     args.cuda = args.ngpu > 0 and torch.cuda.is_available()
 

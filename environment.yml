@@ -17,3 +17,4 @@ dependencies:
         - scikit-learn
         - joblib
         - tqdm
+        - matplotlib

@@ -47,7 +47,7 @@ def load_data(dataset, data_path, triplet=False, batch_size=32, prefetch=4, set_
             anchors = np.array([data_train.labels[g[0]] for g in data_train.groups])
             anchors_counts = [(a==anchors).sum() for a in anchors]
             anchor_probs = 1/np.array(anchors_counts)
-            train_sampler = torch.utils.data.sampler.WeightedRandomSampler(anchor_probs, 100000, replacement=True)
+            train_sampler = torch.utils.data.sampler.WeightedRandomSampler(anchor_probs, 200000, replacement=True)
             train_loader = DataLoader(data_train, batch_size=batch_size, num_workers=prefetch, collate_fn=du.collate_fn_multiple_size_siamese, sampler=train_sampler)
             batch_size = 6*batch_size
         else:
@@ -68,11 +68,21 @@ def load_data(dataset, data_path, triplet=False, batch_size=32, prefetch=4, set_
     elif dataset == 'histograph-ak':
         data_train, queries_valid, gallery_valid, queries_test, gallery_test = load_histograph_ak(data_path, triplet)
         print_statistics(data_train, queries_valid, gallery_valid, queries_test, gallery_test)
-        train_loader = DataLoader(data_train, batch_size=batch_size, num_workers=prefetch, collate_fn=du.collate_fn_multiple_size_siamese, shuffle=True)
 
         if triplet:
+            anchors = np.array([data_train.labels[g[0]] for g in data_train.groups])
+            anchors_counts = [(a==anchors).sum() for a in anchors]
+            anchor_probs = 1/np.array(anchors_counts)
+            train_sampler = torch.utils.data.sampler.WeightedRandomSampler(anchor_probs, 100000, replacement=True)
+            train_loader = DataLoader(data_train, batch_size=batch_size, num_workers=prefetch, collate_fn=du.collate_fn_multiple_size_siamese, sampler=train_sampler)
             batch_size = 6*batch_size
         else:
+            pairs = np.array([True if data_train.labels[g[0]]==data_train.labels[g[1]] else False for g in data_train.groups])
+            weights = np.zeros(len(pairs))
+            weights[pairs] = 1.0/(pairs+0.0).sum()
+            weights[np.invert(pairs)] = 1.0/(np.invert(pairs)+0.0).sum()
+            train_sampler = torch.utils.data.sampler.WeightedRandomSampler(weights, 3000, replacement=True)
+            train_loader = DataLoader(data_train, batch_size=batch_size, num_workers=prefetch, collate_fn=du.collate_fn_multiple_size_siamese, sampler=train_sampler, pin_memory=True)
             batch_size = 4*batch_size
 
         # Load same numbers of graphs that are asked in training
@@ -85,7 +95,7 @@ def load_data(dataset, data_path, triplet=False, batch_size=32, prefetch=4, set_
     raise NameError(dataset + ' not implemented!')
 
 
-def print_statistics(data_train, data_valid, gallery_valid, data_test, gallery_test): 
+def print_statistics(data_train, data_valid, gallery_valid, data_test, gallery_test):
     print('* Train with {} groups of graphs'.format(len(data_train)))
     print('* Validation with {} queries and {} graphs in the gallery'.format(len(data_valid), len(gallery_valid)))
     print('* Test with {} queries and {} graphs in the gallery'.format(len(data_test), len(gallery_test)))
@@ -97,16 +107,16 @@ def load_iam(data_path, triplet=False):
     split = os.path.normpath(data_path).split(os.sep)
     split[-2] = split[-2] + '-pickled'
     pickle_dir = os.path.join(*split)
-    if split[0]=='': 
+    if split[0]=='':
         pickle_dir = os.sep + pickle_dir
-    
+
     if not os.path.isdir(pickle_dir):
         # Data to pickle
         dataset_to_pickle(data_path, pickle_dir, create_graph_iam, '.gxl')
-    
+
     # Get data for train, validation and test
     data_train = Iam_train(pickle_dir, os.path.join(data_path, 'train.cxl'), triplet)
-    
+
     if os.path.isfile(os.path.join(data_path, 'validation.cxl')):
         data_valid = Iam(pickle_dir, os.path.join(data_path, 'validation.cxl'))
     else:
@@ -123,16 +133,16 @@ def load_histograph_gw(data_path, triplet=False, set_partition='cv1'):
     split = os.path.normpath(data_path).split(os.sep)
     split[-2] = split[-2] + '-pickled'
     pickle_dir = os.path.join(*split)
-    if split[0]=='': 
+    if split[0]=='':
         pickle_dir = os.sep + pickle_dir
 
     if not os.path.isdir(pickle_dir):
         # Data to pickle
         dataset_to_pickle(data_path, pickle_dir, create_graph_histograph, '.gxl')
-    
+
     gt_path = os.path.join(data_path, os.pardir, '00_GroundTruth', set_partition)
     data_train = HistoGraph_train(pickle_dir, os.path.join(gt_path,'train.txt'), triplet)
-    
+
     gallery_valid = HistoGraph(pickle_dir, os.path.join(gt_path, 'valid.txt'))
     gallery_test = HistoGraph(pickle_dir, os.path.join(gt_path, 'test.txt'))
 
@@ -152,22 +162,22 @@ def load_histograph_ak(data_path, triplet=False):
     split = os.path.normpath(data_path).split(os.sep)
     split[-2] = split[-2] + '-pickled'
     pickle_dir = os.path.join(*split)
-    if split[0]=='': 
+    if split[0]=='':
         pickle_dir = os.sep + pickle_dir
 
     if not os.path.isdir(pickle_dir):
         # Data to pickle
         dataset_to_pickle(data_path, pickle_dir, create_graph_histograph, '.gxl')
-    
+
     gt_path = os.path.join(data_path, os.pardir, '00_GroundTruth' )
     data_train = HistoGraph_train(os.path.join(pickle_dir, '01_Train_I'), os.path.join(gt_path, '01_Train_I', 'words.txt'), triplet)
-    
+
     gallery_valid = HistoGraph(os.path.join(pickle_dir, '01_Train_I'), os.path.join(gt_path, '01_Train_I', 'words.txt'))
     gallery_test = HistoGraph(os.path.join(pickle_dir, '02_Test'), os.path.join(gt_path, '02_Test', 'words.txt'))
 
     queries_valid = HistoGraph(os.path.join(pickle_dir, '01_Train_I'), os.path.join(gt_path, '01_Train_I', 'words.txt'), os.path.join(gt_path, '02_Test', 'queries.txt'))
     queries_test = HistoGraph(os.path.join(pickle_dir, '02_Test'), os.path.join(gt_path, '02_Test', 'queries.txt'))
-    
+
     # Get labels to create a unique identifier
     unique_labels = np.unique(np.concatenate((queries_valid.getlabels(), queries_test.getlabels(), gallery_valid.getlabels(), gallery_test.getlabels())))
     ulabels_dict = {l:i for i, l in enumerate(unique_labels)}

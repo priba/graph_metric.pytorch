@@ -1,4 +1,5 @@
-# -*- coding: utf-8 -*- 
+#!/usr/bin/env python
+# -*- coding: utf-8 -*-
 from __future__ import print_function, division
 
 """
@@ -54,10 +55,10 @@ def train(data_loader, nets, optimizer, cuda, criterion, epoch):
                 g3.ndata['h'] = g3.ndata['h'].cuda()
             else:
                 target = target.cuda()
-        
+
         batch_load_time.update(time.time() - end)
         optimizer.zero_grad()
-        
+
         # Output
         g1 = net(g1)
         g2 = net(g2)
@@ -67,11 +68,11 @@ def train(data_loader, nets, optimizer, cuda, criterion, epoch):
             loss = criterion(g1, g2, g3, distNet)
         else:
             loss = criterion(g1, g2, target, distNet)
-        
+
         # Gradiensts and update
         loss.backward()
         optimizer.step()
-        
+
         # Save values
         losses.update(loss.item(), g1.batch_size)
         batch_time.update(time.time() - end)
@@ -96,14 +97,14 @@ def main():
     else:
         args.triplet=False
         criterion = ContrastiveLoss(margin=args.margin)
-    
+
     print('Prepare data')
     train_loader, valid_loader, valid_gallery_loader, test_loader, test_gallery_loader, in_size = load_data(args.dataset, args.data_path, triplet=args.triplet, batch_size=args.batch_size, prefetch=args.prefetch, set_partition=args.set_partition)
 
     print('Create model')
-    net = models.GNN(in_size, args.hidden, args.out_size, dropout=args.dropout) 
+    net = models.GNN(in_size, args.hidden, args.out_size, dropout=args.dropout)
     distNet = distance.SoftHd(args.out_size)
-    
+
     optimizer = torch.optim.Adam(list(net.parameters())+list(distNet.parameters()), args.learning_rate, weight_decay=args.decay)
 
     print('Check CUDA')
@@ -129,14 +130,14 @@ def main():
 
     if not args.test:
         print('***Train***')
-        
+
         for epoch in range(start_epoch, args.epochs):
             # Update learning rate
             adjust_learning_rate(optimizer, epoch)
 
             loss_train = train(train_loader, [net, distNet], optimizer, args.cuda, criterion, epoch)
             acc_valid, map_valid = test(valid_loader, valid_gallery_loader, [net, distNet], args.cuda)
-            
+
             # Early-Stop + Save model
             if map_valid.avg > best_perf:
                 best_perf = map_valid.avg
@@ -157,7 +158,7 @@ def main():
                 logger.add_scalar('map_valid', map_valid.avg)
                 logger.add_scalar('learning_rate', args.learning_rate)
                 logger.step()
-        
+
         # Load Best model in case of save it
         if args.save is not None:
             print('Loading best  model')
@@ -173,10 +174,11 @@ def main():
     sys.exit()
 
 if __name__ == '__main__':
+    torch.autograd.set_detect_anomaly(True)
     # Parse options
     args = Options().parse()
     print('Parameters:\t' + str(args))
-    
+
     # Check cuda & Set random seed
     args.cuda = args.ngpu > 0 and torch.cuda.is_available()
 

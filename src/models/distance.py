@@ -30,7 +30,7 @@ class SoftHd(nn.Module):
         return (xx - yy).abs().pow(p).sum(-1)
 
 
-    def soft_hausdorff(self, g1, g2):
+    def soft_hausdorff(self, g1, g2, train=True):
         dist_matrix = self.cdist(g1.ndata['h'], g2.ndata['h'], p=2)/2.0
 
         d1 = self.ins_del_cost(g1.ndata['h']).abs().squeeze()
@@ -39,13 +39,17 @@ class SoftHd(nn.Module):
         # \sum_{a\in set1} \inf_{b_\in set2} d(a,b)
         a, indA = dist_matrix.min(0)
         a = torch.min(a, d2)
-        a = a.mean()
-         
+
         # \sum_{b\in set2} \inf_{a_\in set1} d(a,b)
         b, indB = dist_matrix.min(1)
         b = torch.min(b, d1)
-        b = b.mean()
-        d = a + b
+
+        d = a.mean() + b.mean()
+
+        if train:
+            return d
+        indA[a==d2] = dist_matrix.shape[0]
+        indB[b==d1] = dist_matrix.shape[1]
         return d, indB, indA
 
 
@@ -59,9 +63,9 @@ class SoftHd(nn.Module):
         d = []
         for i in range(len(g2_list)):
             if mode == 'pairs':
-                d_aux,_,_ = self.soft_hausdorff(g1_list[i], g2_list[i])
+                d_aux = self.soft_hausdorff(g1_list[i], g2_list[i])
             elif mode == 'retrieval':
-                d_aux,_,_ = self.soft_hausdorff(g1_list[0], g2_list[i])
+                d_aux = self.soft_hausdorff(g1_list[0], g2_list[i])
             else:
                 raise NameError(mode + ' not implemented!')
             d.append(d_aux)
