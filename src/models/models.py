@@ -7,16 +7,16 @@ from dgl.nn.pytorch.conv import GATConv
 
 
 class GNN(nn.Module):
-    def __init__(self, in_dim, hidden_dim, out_dim, heads=4, dropout=0.3): 
+    def __init__(self, in_dim, hidden_dim, out_dim, heads=4, dropout=0.3):
         super(GNN, self).__init__()
 
         self.layers = nn.ModuleList([
-            GATConv(in_dim, hidden_dim, heads, residual=True, activation=F.leaky_relu),
-            GATConv(heads*hidden_dim, hidden_dim, heads, feat_drop=dropout, residual=True, activation=F.leaky_relu)])
+            GATConv(in_dim, hidden_dim, heads, residual=True, activation=F.relu),
+            GATConv(heads*hidden_dim, hidden_dim, heads, feat_drop=dropout, residual=True, activation=F.relu)])
 
-        self.bn = nn.ModuleList([
-            nn.BatchNorm1d(heads*hidden_dim),
-            nn.BatchNorm1d(heads*hidden_dim)])
+#        self.bn = nn.ModuleList([
+#            nn.BatchNorm1d(heads*hidden_dim),
+#            nn.BatchNorm1d(heads*hidden_dim)])
 
         self.last_layer = GATConv(heads*hidden_dim, out_dim, heads, residual=True)
 
@@ -31,7 +31,7 @@ class GNN(nn.Module):
         h = self.last_layer(g, h)
         h = h.mean(1)
 
-        h = torch.sigmoid(h)
+        h = torch.tanh(h)
         g.ndata['h'] = h
 
         return g

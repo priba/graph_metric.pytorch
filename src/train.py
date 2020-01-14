@@ -8,6 +8,7 @@ from __future__ import print_function, division
 
 # Python modules
 import torch
+from torch.optim.lr_scheduler import StepLR
 import glob
 import numpy as np
 import time
@@ -105,7 +106,9 @@ def main():
     net = models.GNN(in_size, args.hidden, args.out_size, dropout=args.dropout)
     distNet = distance.SoftHd(args.out_size)
 
-    optimizer = torch.optim.Adam(list(net.parameters())+list(distNet.parameters()), args.learning_rate, weight_decay=args.decay)
+#    optimizer = torch.optim.Adam(list(net.parameters())+list(distNet.parameters()), args.learning_rate, weight_decay=args.decay)
+    optimizer = torch.optim.SGD(list(net.parameters())+list(distNet.parameters()), args.learning_rate, momentum=args.momentum, weight_decay=args.decay, nesterov=True)
+    scheduler = StepLR(optimizer, 10, gamma = args.gamma)
 
     print('Check CUDA')
     if args.cuda and args.ngpu > 1:
@@ -132,11 +135,10 @@ def main():
         print('***Train***')
 
         for epoch in range(start_epoch, args.epochs):
-            # Update learning rate
-            adjust_learning_rate(optimizer, epoch)
 
             loss_train = train(train_loader, [net, distNet], optimizer, args.cuda, criterion, epoch)
             acc_valid, map_valid = test(valid_loader, valid_gallery_loader, [net, distNet], args.cuda)
+            scheduler.step()
 
             # Early-Stop + Save model
             if map_valid.avg > best_perf:
