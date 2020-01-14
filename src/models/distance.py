@@ -48,8 +48,9 @@ class SoftHd(nn.Module):
         b, indB = dist_matrix.min(1)
         b = torch.min(b, d1)
 
-        # d = a.mean() + b.mean()
-        d = (a.sum() + b.sum())/(a.shape[0]+ b.shape[0])
+        #d = a.mean() + b.mean()
+        d = a.sum() + b.sum()
+        d = d/(a.shape[0] + b.shape[0])
 
         if train:
             return d

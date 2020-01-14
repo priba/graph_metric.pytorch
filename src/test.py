@@ -15,7 +15,7 @@ import os
 # Own modules
 from options import Options
 from Logger import LogMetric
-from utils import load_checkpoint, graph_cuda, graph_to_sparse, graph_cat, knn_accuracy, mean_average_precision
+from utils import load_checkpoint, knn_accuracy, mean_average_precision
 from models import models, distance
 from data.load_data import load_data
 from loss.contrastive import ContrastiveLoss, TripletLoss
@@ -72,10 +72,10 @@ def test(data_loader, gallery_loader, nets, cuda):
         target_query = np.array(np.concatenate(target_query))
 
         # K-NN classifier
-        acc.update(knn_accuracy(dist_matrix, target_gallery, target_query, k=5))
+        acc.update(knn_accuracy(dist_matrix, target_gallery, target_query, k=5, dataset=data_loader.dataset.dataset))
 
         # mAP retrieval
-        meanap.update(mean_average_precision(dist_matrix, target_gallery, target_query))
+        meanap.update(mean_average_precision(dist_matrix, target_gallery, target_query, dataset=data_loader.dataset.dataset))
     batch_time.update(time.time()-start)
     print('* Test Acc {acc.avg:.3f}; mAP {meanap.avg: .3f}; Time x Test {b_time.avg:.3f}'
             .format(acc=acc, meanap=meanap, b_time=batch_time))
