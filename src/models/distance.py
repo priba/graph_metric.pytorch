@@ -15,7 +15,11 @@ __email__ = "priba@cvc.uab.cat"
 class SoftHd(nn.Module):
     def __init__(self, in_sz):
         super(SoftHd, self).__init__()
-        self.ins_del_cost = nn.Linear(in_sz, 1)
+        self.ins_del_cost = nn.Sequential( nn.Linear(in_sz, 64),
+                                           nn.ReLU(True),
+                                           nn.Linear(64, 64),
+                                           nn.ReLU(True),
+                                           nn.Linear(64, 1))
         self.p = 2
 
     def cdist(self, set1, set2, p=2.0):
@@ -44,10 +48,12 @@ class SoftHd(nn.Module):
         b, indB = dist_matrix.min(1)
         b = torch.min(b, d1)
 
-        d = a.mean() + b.mean()
+        # d = a.mean() + b.mean()
+        d = (a.sum() + b.sum())/(a.shape[0]+ b.shape[0])
 
         if train:
             return d
+
         indA[a==d2] = dist_matrix.shape[0]
         indB[b==d1] = dist_matrix.shape[1]
         return d, indB, indA
