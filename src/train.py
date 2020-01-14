@@ -17,7 +17,7 @@ import sys
 # Own modules
 from options import Options
 from Logger import LogMetric
-from utils import save_checkpoint, load_checkpoint, graph_cuda, graph_to_sparse
+from utils import save_checkpoint, load_checkpoint
 from models import models, distance
 from test import test
 from data.load_data import load_data

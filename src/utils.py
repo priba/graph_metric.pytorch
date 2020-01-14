@@ -17,64 +17,21 @@ __author__ = 'Pau Riba'
 __email__ = 'priba@cvc.uab.cat'
 
 
-# Data
-def graph_to_sparse(g):
-    if g[1].shape[0]==0:
-        g_out = ( g[0],
-                  torch.sparse.FloatTensor(size=(g[0].shape[0], g[0].shape[0])),
-                  g[3]
-                )
-    else:
-        g_out = ( g[0],
-                  torch.sparse.FloatTensor(g[1], g[2], (g[0].shape[0], g[0].shape[0])),
-                  g[3]
-                )
-    return g_out
-
-
-def graph_cuda(g):
-    """ Graph is represented as
-    g (nodes, indices, data, target)
-    output (nodes, am [sparse], target)
-    """
-    g = tuple((gi.cuda() for gi in g) )
-    return g
-
-
-def graph_cat(g):
-    nodes = []
-    indices = []
-    data = []
-    g_size = []
-    offset = 0
-    for gi in g:
-        nodes.append(gi[0])
-        indices.append(gi[1]._indices()+offset)
-        data.append(gi[1]._values())
-        g_size.append(gi[2])
-        offset = offset + gi[0].size(0)
-    g_out = (
-            torch.cat(nodes),
-            torch.cat(indices, dim=1),
-            torch.cat(data),
-            torch.cat(g_size)
-            )
-    return graph_to_sparse(g_out)
-
-
 # Evaluation
-def knn_accuracy(dist_matrix, target_gallery, target_query, k=5):
+def knn_accuracy(dist_matrix, target_gallery, target_query, k=5, dataset='gw'):
     # Predict
     _, ind = dist_matrix.sort(1)
     sort_target = target_gallery[ind.cpu()]
-    sort_target = sort_target[:,:k]
-    
+    if  True: #dataset=='gw':
+        sort_target = sort_target[:,:k]
+    else:
+        sort_target = sort_target[:,1:k+1]
+
     # Counts
     counts = np.zeros(sort_target.shape)
     for i in range(k):
-        #counts[:,i] = (sort_target[:, i].unsqueeze(1) == sort_target).long().sum(1)
         counts[:,i] = (np.expand_dims(sort_target[:, i], axis=1) == sort_target).sum(1)
-    
+
     predict_ind = counts.argmax(1)
     predict = [sort_target[i, pi] for i, pi in enumerate(predict_ind)]
     predict = np.stack(predict)
@@ -85,15 +42,26 @@ def knn_accuracy(dist_matrix, target_gallery, target_query, k=5):
     return acc
 
 
-def mean_average_precision(dist_matrix, target_gallery, target_query):
+def mean_average_precision(dist_matrix, target_gallery, target_query, dataset='gw'):
     # Number of queries
     nq = target_query.shape[0]
 
     # Distance to similarity
-    sim = (1+dist_matrix.max()) - dist_matrix
+    sim = 1/(1+dist_matrix)
 
     # Relevant items
     str_sim = (np.expand_dims(target_query, axis=1) == np.expand_dims(target_gallery, axis=0)) * 1
+
+    # Self comparison
+    if False: #dataset=='ak':
+        id_x, id_y = torch.where(sim==1)
+        new_sim = torch.zeros(sim.shape[0], sim.shape[1]-1).to(sim.device)
+        new_str_sim = np.zeros([sim.shape[0], sim.shape[1]-1])
+        for i in range(id_x.shape[0]):
+            new_sim[i] = torch.cat([sim[i,:id_y[i]], sim[i,id_y[i]+1:]])
+            new_str_sim[i] = np.concatenate([str_sim[i,:id_y[i]], str_sim[i,id_y[i]+1:]])
+        sim = new_sim
+        str_sim = new_str_sim
 
     num_cores = min(multiprocessing.cpu_count(), 32)
     aps = Parallel(n_jobs=num_cores)(delayed(average_precision_score)(str_sim[iq], sim[iq].cpu().numpy()) for iq in range(nq))
@@ -101,8 +69,8 @@ def mean_average_precision(dist_matrix, target_gallery, target_query):
     ind = [i for i, ap in enumerate(aps) if np.isnan(ap)]
     for i in sorted(ind, reverse=True):
         del aps[i]
-    return np.mean(aps) 
-    
+    return np.mean(aps)
+
 # Checkpoints
 def save_checkpoint(state, directory, file_name):
 

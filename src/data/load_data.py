@@ -143,10 +143,10 @@ def load_histograph_gw(data_path, triplet=False, set_partition='cv1'):
     gt_path = os.path.join(data_path, os.pardir, '00_GroundTruth', set_partition)
     data_train = HistoGraph_train(pickle_dir, os.path.join(gt_path,'train.txt'), triplet)
 
-    gallery_valid = HistoGraph(pickle_dir, os.path.join(gt_path, 'valid.txt'))
-    gallery_test = HistoGraph(pickle_dir, os.path.join(gt_path, 'test.txt'))
+    gallery_valid = HistoGraph(pickle_dir, os.path.join(gt_path, 'valid.txt'), dataset='gw')
+    gallery_test = HistoGraph(pickle_dir, os.path.join(gt_path, 'test.txt'), dataset='gw')
 
-    queries = HistoGraph(pickle_dir, os.path.join(gt_path, 'train.txt'), os.path.join(gt_path, 'keywords.txt'))
+    queries = HistoGraph(pickle_dir, os.path.join(gt_path, 'train.txt'), os.path.join(gt_path, 'keywords.txt'), dataset='gw')
     # Get labels to create a unique identifier
     unique_labels = np.unique(np.concatenate((queries.getlabels(), gallery_valid.getlabels(), gallery_test.getlabels())))
     ulabels_dict = {l:i for i, l in enumerate(unique_labels)}
@@ -172,10 +172,10 @@ def load_histograph_ak(data_path, triplet=False):
     gt_path = os.path.join(data_path, os.pardir, '00_GroundTruth' )
     data_train = HistoGraph_train(os.path.join(pickle_dir, '01_Train_I'), os.path.join(gt_path, '01_Train_I', 'words.txt'), triplet)
 
-    gallery_valid = HistoGraph(os.path.join(pickle_dir, '01_Train_I'), os.path.join(gt_path, '01_Train_I', 'words.txt'))
+    gallery_valid = HistoGraph(os.path.join(pickle_dir, '01_Train_I'), os.path.join(gt_path, '01_Train_I', 'words.txt'), dataset='ak')
     gallery_test = HistoGraph(os.path.join(pickle_dir, '02_Test'), os.path.join(gt_path, '02_Test', 'words.txt'))
 
-    queries_valid = HistoGraph(os.path.join(pickle_dir, '01_Train_I'), os.path.join(gt_path, '01_Train_I', 'words.txt'), os.path.join(gt_path, '02_Test', 'queries.txt'))
+    queries_valid = HistoGraph(os.path.join(pickle_dir, '01_Train_I'), os.path.join(gt_path, '01_Train_I', 'words.txt'), os.path.join(gt_path, '02_Test', 'queries.txt'), dataset='ak')
     queries_test = HistoGraph(os.path.join(pickle_dir, '02_Test'), os.path.join(gt_path, '02_Test', 'queries.txt'))
 
     # Get labels to create a unique identifier

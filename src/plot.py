@@ -35,12 +35,12 @@ def plot(g1, g2, ind1, ind2, name1, name2, distance):
     pos2 = {k: v.numpy() for k, v in pos2.items()}
 
     plt.subplot(221)
-    nx.draw(g1, pos=pos1)
+    nx.draw(g1, pos=pos1, node_size=50)
     plt.title(f"{name1}")
     plt.gca().invert_yaxis()
 
     plt.subplot(222)
-    nx.draw(g2, pos=pos2)
+    nx.draw(g2, pos=pos2, node_size=50)
     plt.title(f"{name2}")
     plt.gca().invert_yaxis()
 
@@ -90,13 +90,16 @@ def main(query, query_name,  target, target_name):
     pickle_dir = os.path.join(*split)
     if split[0]=='':
         pickle_dir = os.sep + pickle_dir
-    gt_path = os.path.join(args.data_path, os.pardir, '00_GroundTruth', args.set_partition)
-    data = HistoGraph(pickle_dir, os.path.join(gt_path, 'test.txt'))
-    data_query = copy.deepcopy(data)
+#    gt_path = os.path.join(args.data_path, os.pardir, '00_GroundTruth', args.set_partition)
+    gt_path = os.path.join(args.data_path, os.pardir, '00_GroundTruth')
+#    data = HistoGraph(pickle_dir, os.path.join(gt_path, 'test.txt'))
+    data = HistoGraph(os.path.join(pickle_dir, '02_Test'), os.path.join(gt_path, '02_Test', 'words.txt'))
+    data_query = HistoGraph(os.path.join(pickle_dir, '02_Test'), os.path.join(gt_path, '02_Test', 'queries.txt'))
+
+    # data_query = copy.deepcopy(data)
     data_query.graphs = [query]
     data_query.labels = [query_name]
     g1, l1 = data_query[0]
-
 
     data_target = data
     data_target.graphs = [target]
@@ -127,7 +130,7 @@ def main(query, query_name,  target, target_name):
     print('***PLOT***')
     g1_out = net(g1)
     g2_out = net(g2)
-    dist, indB, indA = distNet.soft_hausdorff(g1_out, g2_out)
+    dist, indB, indA = distNet.soft_hausdorff(g1_out, g2_out, train=False)
     plot(g1_orig.to_networkx(node_attrs=['h']).to_undirected(), g2_orig.to_networkx(node_attrs=['h']).to_undirected(), indB.tolist(), indA.tolist(), query_name, target_name, dist.item())
 
 if __name__ == '__main__':
@@ -148,6 +151,7 @@ if __name__ == '__main__':
     if args.load is None:
         raise Exception('Cannot plot without loading a model.')
 
-    main(query='276-19-06.p', query_name='day', target='306-30-04.p', target_name='day')
-    main(query='276-19-06.p', query_name='day', target='306-32-08.p', target_name='the')
+    main(query='kq0202.p', query_name='WURDEN', target='kw000377.p', target_name='WURDEN')
+    main(query='kq0202.p', query_name='WURDEN', target='kw000218.p', target_name='VERLESEN')
+    main(query='kq0202.p', query_name='WÜRDEN', target='kw000377.p', target_name='WURDEN')
 

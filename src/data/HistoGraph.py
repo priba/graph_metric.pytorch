@@ -29,6 +29,7 @@ class HistoGraph_train(data.Dataset):
         if self.triplet:
             # Triplet (anchor, positive, negative)
             self.groups = [ (i, j) for i in range(len(self.labels)) for j in np.where(self.labels[i] == self.labels)[0] if i != j ]
+            self.labels_len = np.array(list(map(len, self.labels)))
             self.labels_counts = np.array([(l==self.labels).sum() for l in self.labels])
         else:
             # Siamese all pairs
@@ -49,14 +50,14 @@ class HistoGraph_train(data.Dataset):
             # Random negative choice where it would be of similar size
             possible_ind = np.where(self.labels!=target1)[0]
             labels_counts = self.labels_counts[possible_ind]
-            labels_probs = 1/labels_counts
+            labels_len = np.abs(self.labels_len[possible_ind] - self.labels_len[ind[0]]) + 1.0
+            labels_probs = 1/(labels_counts*labels_len)
             labels_probs = labels_probs/labels_probs.sum()
             neg_ind = np.random.choice(possible_ind, 1, p=labels_probs)
 
             # Graph 3
             g3 = self._loadgraph(neg_ind[0])
             target_neg = self.labels[neg_ind[0]]
-
             return g1, g2, g3, torch.Tensor([])
 
         target = torch.FloatTensor([0.0]) if target1 == target2 else torch.FloatTensor([1.0])
@@ -79,7 +80,7 @@ class HistoGraph_train(data.Dataset):
 
 
 class HistoGraph(data.Dataset):
-    def __init__(self, root_path, file_list, keywords_file=None):
+    def __init__(self, root_path, file_list, keywords_file=None, dataset='gw'):
         self.root = root_path
         self.file_list = file_list
 
@@ -87,6 +88,8 @@ class HistoGraph(data.Dataset):
 
         # To pickle
         self.graphs = [g+'.p' for g in self.graphs]
+
+        self.dataset = dataset
 
         if keywords_file is not None:
             with open(keywords_file, 'r') as f:
