@@ -23,6 +23,7 @@ from models import models, distance
 from test import test
 from data.load_data import load_data
 from loss.contrastive import ContrastiveLoss, TripletLoss
+
 __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
 
@@ -106,8 +107,7 @@ def main():
     net = models.GNN(in_size, args.hidden, args.out_size, dropout=args.dropout)
     distNet = distance.SoftHd(args.out_size)
 
-#    optimizer = torch.optim.Adam(list(net.parameters())+list(distNet.parameters()), args.learning_rate, weight_decay=args.decay)
-    optimizer = torch.optim.SGD(list(net.parameters())+list(distNet.parameters()), args.learning_rate, momentum=args.momentum, weight_decay=args.decay, nesterov=True)
+    optimizer = torch.optim.Adam(list(net.parameters())+list(distNet.parameters()), args.learning_rate, weight_decay=args.decay)
     scheduler = StepLR(optimizer, 10, gamma = args.gamma)
 
     print('Check CUDA')
@@ -138,7 +138,6 @@ def main():
 
             loss_train = train(train_loader, [net, distNet], optimizer, args.cuda, criterion, epoch)
             acc_valid, map_valid = test(valid_loader, valid_gallery_loader, [net, distNet], args.cuda)
-            scheduler.step()
 
             # Early-Stop + Save model
             if map_valid.avg > best_perf:
@@ -158,9 +157,10 @@ def main():
                 logger.add_scalar('loss_train', loss_train.avg)
                 logger.add_scalar('acc_valid', acc_valid.avg)
                 logger.add_scalar('map_valid', map_valid.avg)
-                logger.add_scalar('learning_rate', args.learning_rate)
+                logger.add_scalar('learning_rate', scheduler.get_lr()[0])
                 logger.step()
 
+            scheduler.step()
         # Load Best model in case of save it
         if args.save is not None:
             print('Loading best  model')
