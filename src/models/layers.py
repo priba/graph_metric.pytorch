@@ -1,170 +1,100 @@
-import math
+"""Torch Module for Gated Graph Convolution layer"""
+# pylint: disable= no-member, arguments-differ, invalid-name, cell-var-from-loop
+import torch as th
+from torch import nn
+from torch.nn import init
 
-import torch
-import torch.nn as nn
-from torch.autograd import Function
+from dgl import function as fn
 
 
-class GConv(nn.Module):
+class GatedGraphConv(nn.Module):
+    r"""Gated Graph Convolution layer from paper `Gated Graph Sequence
+    Neural Networks <https://arxiv.org/pdf/1511.05493.pdf>`__.
+
+    .. math::
+        h_{i}^{0} & = [ x_i \| \mathbf{0} ]
+
+        a_{i}^{t} & = \sum_{j\in\mathcal{N}(i)} W_{e_{ij}} h_{j}^{t}
+
+        h_{i}^{t+1} & = \mathrm{GRU}(a_{i}^{t}, h_{i}^{t})
+
+    Parameters
+    ----------
+    in_feats : int
+        Input feature size.
+    out_feats : int
+        Output feature size.
+    n_steps : int
+        Number of recurrent steps.
+    n_etypes : int
+        Number of edge types.
+    bias : bool
+        If True, adds a learnable bias to the output. Default: ``True``.
     """
-    Simple GCN layer, similar to https://arxiv.org/abs/1609.02907
-    """
+    def __init__(self,
+                 in_feats,
+                 out_feats,
+                 n_steps,
+                 n_etypes,
+                 bias=True,
+                 dropout = 0.3):
+        super(GatedGraphConv, self).__init__()
+        self._in_feats = in_feats
+        self._out_feats = out_feats
+        self._n_steps = n_steps
+        self._n_etypes = n_etypes
+        self.linears = nn.ModuleList(
+            [nn.Linear(out_feats, out_feats) for _ in range(n_etypes)]
+        )
+        self.gru = nn.GRUCell(out_feats, out_feats, bias=bias)
+        self.dropout = nn.Dropout(dropout)
+        self.reset_parameters()
 
-    def __init__(self, in_features, out_features, bias_bool=True, bn_bool=True, J=2):
-        super(GConv, self).__init__()
-        self.in_features = in_features
-        self.out_features = out_features
-        self.J = J # Number of W
-        self.bias_bool = bias_bool
-        self.fc = nn.Linear(self.J*self.in_features, self.out_features, bias=self.bias_bool)
+    def reset_parameters(self):
+        """Reinitialize learnable parameters."""
+        gain = init.calculate_gain('relu')
+        self.gru.reset_parameters()
+        for linear in self.linears:
+            init.xavier_normal_(linear.weight, gain=gain)
+            init.zeros_(linear.bias)
 
-        self.bn_bool = bn_bool
-        if self.bn_bool:
-            self.bn = nn.BatchNorm1d(self.out_features)
+    def forward(self, graph, feat, etypes):
+        """Compute Gated Graph Convolution layer.
 
-    
-    def forward(self, x, W):
-        output = []
-        for w in W:
-            output_mm = torch.sparse.mm(w, x)
-            output.append(torch.cat(output_mm.split(x.shape[0]), dim=1))
-        output = torch.cat(output, dim=1)
+        Parameters
+        ----------
+        graph : DGLGraph
+            The graph.
+        feat : torch.Tensor
+            The input feature of shape :math:`(N, D_{in})` where :math:`N`
+            is the number of nodes of the graph and :math:`D_{in}` is the
+            input feature size.
+        etypes : torch.LongTensor
+            The edge type tensor of shape :math:`(E,)` where :math:`E` is
+            the number of edges of the graph.
 
-        output = self.fc(output)
+        Returns
+        -------
+        torch.Tensor
+            The output feature of shape :math:`(N, D_{out})` where :math:`D_{out}`
+            is the output feature size.
+        """
+        graph = graph.local_var()
+        zero_pad = feat.new_zeros((feat.shape[0], self._out_feats - feat.shape[1]))
+        feat = th.cat([feat, zero_pad], -1)
 
-        if self.bn_bool:
-            output = self.bn(output)
-        
-        return output
-
-    def __repr__(self):
-        return self.__class__.__name__ + '(in_features=' \
-               + str(self.in_features) + ', out_features=' \
-               + str(self.out_features) + ', bias=' \
-               + str(self.bias_bool) + ', batch_norm=' \
-               + str(self.bn_bool) + ')'
-
-class EdgeCompute(nn.Module):
-    """
-    Simple Edge computation layer, similar to https://arxiv.org/pdf/1711.04043.pdf
-    """
-
-    def __init__(self, in_features, hid=64, J=2):
-        super(EdgeCompute, self).__init__()
-        self.in_features = in_features
-        self.hid = hid
-        self.J = J
-
-        self.J_range = torch.arange(0,self.J).unsqueeze(0)
-
-        # Define a network per each order in the adjacency matrix
-        self.mlp = nn.Sequential(
-                nn.Linear(self.in_features, self.hid),
-                nn.ReLU(),
-                nn.Linear(self.hid, self.hid),
-                nn.ReLU(),
-                nn.Linear(self.hid, self.J),
-                nn.Sigmoid()
-                )
-
-    def forward(self, x, W):
-        if W._nnz() == 0:
-            Wnew = torch.sparse.FloatTensor(self.J*W.shape[0], W.shape[1]).to(W)
-        else:
-            indices = W._indices()
-            data = W._values()
-            x_diff = x[indices[0]] - x[indices[1]]
-            data = self.mlp(x_diff.abs())
-
-            indices = indices.unsqueeze(-1).expand(*indices.shape, self.J)
-            indices_aux = W.shape[0]*self.J_range.to(indices) + indices[0]
-            indices = torch.stack((indices_aux, indices[1]))
-            indices = indices.view(indices.shape[0],-1)
-            data = data.view(-1)
-            Wnew = ValuesToSparse.apply(indices, data, (self.J*W.shape[0], W.shape[1]))
-        return [Wnew]
-
-    def __repr__(self):
-        return self.__class__.__name__ + '(in_features=' \
-               + str(self.in_features) + ')'
-
-
-class Block(nn.Module):
-    def __init__(self, in_features, out_features, J=2):
-        super(Block, self).__init__()
-        self.in_features = in_features
-        self.out_features = out_features
-        self.J = J
-        self.nl = nn.ReLU()
-
-        # Last operation to map to output size
-        self.wc1 = EdgeCompute(self.in_features, 32, J=self.J)
-        self.wc2 = EdgeCompute(self.in_features, 32, J=self.J)
-        
-        self.conv1 = GConv(self.in_features, self.out_features, J=self.J+1)
-        
-        self.dropout = nn.Dropout(0.3)
-
-        self.conv2 = GConv(self.out_features, self.out_features, J=self.J+1)
-
-        if self.in_features != self.out_features:
-            self.conv_res = nn.Linear(self.in_features, self.out_features, bias=False)
-
-
-    def forward(self, x, Wid, Win):
-        W1 = self.wc1(x, Win)
-        W2 = self.wc2(x, Win)
-
-        residual = x
-
-        x = self.conv1(x, Wid + W1 + W2)
-        x = self.nl(x)
-
-        x = self.dropout(x)
-
-        x = self.conv2(x, Wid + W1 + W2)
-
-        if self.in_features != self.out_features:
-            residual = self.conv_res(residual)
-
-        x = x + residual
-        x = self.nl(x)
-
-        return x
-
-
-# Copy Gradients when getting the values of a sparse tensor
-class GetValues(Function):
-    @staticmethod
-    def forward(ctx, input):
-        ctx.save_for_backward(input)
-        output = input._values().clone()
-        return output
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        input, = ctx.saved_tensors
-        grad_input = None
-        
-        grad_input = torch.sparse.FloatTensor(input._indices(), grad_output, input.shape)
-        if input.is_cuda:
-            grad_input = grad_input.cuda()
-        return grad_input
-
-
-# Create a new torch Float Tensor and allow the gradients to backpropagate
-class ValuesToSparse(Function):
-    @staticmethod
-    def forward(ctx, indices, data, shape):
-        ctx.save_for_backward(indices, data)
-        output = torch.sparse.FloatTensor(indices, data, shape).requires_grad_(True)
-        return output
-
-    @staticmethod
-    def backward(ctx, grad_output):
-        indices, input = ctx.saved_tensors
-        grad_input = None
-        grad_output = grad_output.coalesce()
-        grad_input = grad_output._values().clone()
-        return None, grad_input, None
-
+        for step in range(self._n_steps):
+            graph.ndata['h'] = feat
+            for i in range(self._n_etypes):
+                eids = (etypes == i).nonzero().view(-1)
+                if len(eids) > 0:
+                    graph.apply_edges(
+                        lambda edges: {'W_e*h': self.linears[i](edges.src['h'])},
+                        eids
+                    )
+            graph.update_all(fn.copy_e('W_e*h', 'm'), fn.sum('m', 'a'))
+            a = graph.ndata.pop('a') # (N, D)
+            feat = self.gru(a, feat)
+            if step < self._n_steps-1:
+                feat = self.dropout(feat)
+        return feat

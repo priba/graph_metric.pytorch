@@ -71,6 +71,10 @@ def test(data_loader, gallery_loader, nets, cuda):
         dist_matrix = torch.stack(dist_matrix)
         target_query = np.array(np.concatenate(target_query))
 
+#        str_sim = (np.expand_dims(target_query, axis=1) == np.expand_dims(target_gallery, axis=0)) * 1
+#        dist_sorted, ind_sorted = dist_matrix.sort()
+#        sim_sorted = torch.gather(torch.from_numpy(str_sim).to(dist_matrix.device), dim=1, index=ind_sorted)
+
         # K-NN classifier
         acc.update(knn_accuracy(dist_matrix, target_gallery, target_query, k=5, dataset=data_loader.dataset.dataset))
 
