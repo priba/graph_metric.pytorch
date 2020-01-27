@@ -1,10 +1,44 @@
 """Torch Module for Gated Graph Convolution layer"""
-# pylint: disable= no-member, arguments-differ, invalid-name, cell-var-from-loop
-import torch as th
+import torch
 from torch import nn
 from torch.nn import init
 
 from dgl import function as fn
+
+class EdgeConv(nn.Module):
+    def __init__(self, in_feat, out_feat, residual=False, activation=torch.sigmoid):
+        super(EdgeConv, self).__init__()
+
+        self.residual = residual
+
+        h_feat = 64
+        self.mlp =  nn.Sequential(   nn.Linear(in_feat,h_feat),
+                                     nn.ReLU(True),
+                                     nn.Linear(h_feat, out_feat))
+
+        self.activation = activation
+
+    def message(self, edges):
+        e_out = self.mlp((edges.dst['x']-edges.src['x']).abs())
+
+        if self.residual:
+            e_out = edges.data['x'] + e_out
+
+        if self.activation is not None:
+            e_out = self.activation(e_out)
+
+        return {'e': e_out}
+
+    def forward(self, g, h, he=None):
+        with g.local_scope():
+
+            g.ndata['x'] = h
+            if he is not None:
+                g.edata['x'] = he
+
+            g.apply_edges(self.message)
+
+            return g.edata['e']
 
 
 class GatedGraphConv(nn.Module):
@@ -26,8 +60,10 @@ class GatedGraphConv(nn.Module):
         Output feature size.
     n_steps : int
         Number of recurrent steps.
-    n_etypes : int
-        Number of edge types.
+    edge_func : callable activation function/layer
+        Maps each edge feature to a vector of shape
+        ``(in_feats * out_feats)`` as weight to compute
+        messages.
     bias : bool
         If True, adds a learnable bias to the output. Default: ``True``.
     """
@@ -35,18 +71,27 @@ class GatedGraphConv(nn.Module):
                  in_feats,
                  out_feats,
                  n_steps,
-                 n_etypes,
+                 edge_func,
+                 edge_feats,
                  bias=True,
-                 dropout = 0.3):
+                 dropout = 0.3,
+                 aggregator_type='sum'):
+
         super(GatedGraphConv, self).__init__()
         self._in_feats = in_feats
         self._out_feats = out_feats
         self._n_steps = n_steps
-        self._n_etypes = n_etypes
-        self.linears = nn.ModuleList(
-            [nn.Linear(out_feats, out_feats) for _ in range(n_etypes)]
-        )
-        self.gru = nn.GRUCell(out_feats, out_feats, bias=bias)
+        self.edge_nn = edge_func
+        if aggregator_type == 'sum':
+            self.reducer = fn.sum
+        elif aggregator_type == 'mean':
+            self.reducer = fn.mean
+        elif aggregator_type == 'max':
+            self.reducer = fn.max
+        else:
+            raise KeyError('Aggregator type {} not recognized: '.format(aggregator_type))
+        self.aggre_type = aggregator_type
+        self.gru = nn.GRUCell(in_feats, out_feats, bias=bias)
         self.dropout = nn.Dropout(dropout)
         self.reset_parameters()
 
@@ -54,11 +99,8 @@ class GatedGraphConv(nn.Module):
         """Reinitialize learnable parameters."""
         gain = init.calculate_gain('relu')
         self.gru.reset_parameters()
-        for linear in self.linears:
-            init.xavier_normal_(linear.weight, gain=gain)
-            init.zeros_(linear.bias)
 
-    def forward(self, graph, feat, etypes):
+    def forward(self, graph, feat, efeat):
         """Compute Gated Graph Convolution layer.
 
         Parameters
@@ -80,21 +122,17 @@ class GatedGraphConv(nn.Module):
             is the output feature size.
         """
         graph = graph.local_var()
-        zero_pad = feat.new_zeros((feat.shape[0], self._out_feats - feat.shape[1]))
-        feat = th.cat([feat, zero_pad], -1)
 
         for step in range(self._n_steps):
-            graph.ndata['h'] = feat
-            for i in range(self._n_etypes):
-                eids = (etypes == i).nonzero().view(-1)
-                if len(eids) > 0:
-                    graph.apply_edges(
-                        lambda edges: {'W_e*h': self.linears[i](edges.src['h'])},
-                        eids
-                    )
-            graph.update_all(fn.copy_e('W_e*h', 'm'), fn.sum('m', 'a'))
-            a = graph.ndata.pop('a') # (N, D)
-            feat = self.gru(a, feat)
+            # (n, d_in, 1)
+            graph.ndata['h'] = feat.unsqueeze(-1)
+            # (n, d_in, d_out)
+            graph.edata['w'] = self.edge_nn(efeat).view(-1, self._in_feats, self._out_feats)
+            graph.update_all(fn.u_mul_e('h', 'w', 'm'), self.reducer('m', 'neigh'))
+
+            rst = graph.ndata.pop('neigh').sum(dim=1) # (N, D)
+
+            feat = self.gru(rst, feat)
             if step < self._n_steps-1:
                 feat = self.dropout(feat)
         return feat

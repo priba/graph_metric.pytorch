@@ -17,8 +17,6 @@ class SoftHd(nn.Module):
         super(SoftHd, self).__init__()
         self.ins_del_cost = nn.Sequential( nn.Linear(in_sz, 64),
                                            nn.ReLU(True),
-                                           nn.Linear(64, 64),
-                                           nn.ReLU(True),
                                            nn.Linear(64, 1))
         self.p = 2
 
@@ -35,10 +33,13 @@ class SoftHd(nn.Module):
 
 
     def soft_hausdorff(self, g1, g2, train=True):
-        dist_matrix = self.cdist(g1.ndata['h'], g2.ndata['h'], p=2)/2.0
+        h1 = g1.ndata['h']
+        h2 = g2.ndata['h']
 
-        d1 = self.ins_del_cost(g1.ndata['h']).abs().squeeze()
-        d2 = self.ins_del_cost(g2.ndata['h']).abs().squeeze()
+        dist_matrix = self.cdist(h1, h2, p=2)/2.0
+
+        d1 = torch.tanh(self.ins_del_cost(h1)).abs().squeeze()
+        d2 = torch.tanh(self.ins_del_cost(h2)).abs().squeeze()
 
         # \sum_{a\in set1} \inf_{b_\in set2} d(a,b)
         a, indA = dist_matrix.min(0)
@@ -72,7 +73,8 @@ class SoftHd(nn.Module):
             if mode == 'pairs':
                 d_aux = self.soft_hausdorff(g1_list[i], g2_list[i])
             elif mode == 'retrieval':
-                d_aux = self.soft_hausdorff(g1_list[0], g2_list[i])
+                query = g1_list[0].local_var()
+                d_aux = self.soft_hausdorff(query, g2_list[i])
             else:
                 raise NameError(mode + ' not implemented!')
             d.append(d_aux)
