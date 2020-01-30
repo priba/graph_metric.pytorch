@@ -72,7 +72,6 @@ class GatedGraphConv(nn.Module):
                  out_feats,
                  n_steps,
                  edge_func,
-                 edge_feats,
                  bias=True,
                  dropout = 0.3,
                  aggregator_type='sum'):
@@ -81,6 +80,7 @@ class GatedGraphConv(nn.Module):
         self._in_feats = in_feats
         self._out_feats = out_feats
         self._n_steps = n_steps
+        self.edge_embedding = EdgeConv(in_feats, in_feats, activation=torch.relu)
         self.edge_nn = edge_func
         if aggregator_type == 'sum':
             self.reducer = fn.sum
@@ -100,7 +100,7 @@ class GatedGraphConv(nn.Module):
         gain = init.calculate_gain('relu')
         self.gru.reset_parameters()
 
-    def forward(self, graph, feat, efeat):
+    def forward(self, graph, feat):
         """Compute Gated Graph Convolution layer.
 
         Parameters
@@ -127,6 +127,7 @@ class GatedGraphConv(nn.Module):
             # (n, d_in, 1)
             graph.ndata['h'] = feat.unsqueeze(-1)
             # (n, d_in, d_out)
+            efeat = self.edge_embedding(graph, feat)
             graph.edata['w'] = self.edge_nn(efeat).view(-1, self._in_feats, self._out_feats)
             graph.update_all(fn.u_mul_e('h', 'w', 'm'), self.reducer('m', 'neigh'))
 

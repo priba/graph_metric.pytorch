@@ -196,8 +196,8 @@ def dataset_to_pickle(root_path, out_path, graph_reader, graph_ext):
     file_list = glob.glob(os.path.join(root_path, '*'+graph_ext))
     id_list = np.array([re.search(os.path.join(r'^'+root_path, '(.*)'+graph_ext+'$'), s).group(1) for s in file_list])
     for f in tqdm(id_list):
-        node_labels, am = graph_reader(os.path.join(root_path, f + graph_ext))
-        graph_dict = {'node_labels': node_labels, 'am': am}
+        graph_properties, node_labels, am = graph_reader(os.path.join(root_path, f + graph_ext))
+        graph_dict = {'graph_properties': graph_properties, 'node_labels': node_labels, 'am': am}
         pickle_file = os.path.join(out_path, f+'.p')
         pickle.dump(graph_dict, open(pickle_file, "wb"))
 

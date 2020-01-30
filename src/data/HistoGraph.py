@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 import torch
 import torch.utils.data as data
 import xml.etree.ElementTree as ET
@@ -71,8 +69,11 @@ class HistoGraph_train(data.Dataset):
 
         g = dgl.DGLGraph()
 
+        g.gdata = {}
+        g.gdata['std'] = torch.tensor(graph_dict['graph_properties']).float()
+
         g.add_nodes(graph_dict['node_labels'].shape[0])
-        g.ndata['h'] = torch.tensor(graph_dict['node_labels']).float()
+        g.ndata['pos'] = torch.tensor(graph_dict['node_labels']).float()
 
         g.add_edges(graph_dict['am'][0], graph_dict['am'][1])
 
@@ -116,8 +117,11 @@ class HistoGraph(data.Dataset):
 
         g = dgl.DGLGraph()
 
+        g.gdata = {}
+        g.gdata['std'] = torch.tensor(graph_dict['graph_properties']).float()
+
         g.add_nodes(graph_dict['node_labels'].shape[0])
-        g.ndata['h'] = torch.tensor(graph_dict['node_labels']).float()
+        g.ndata['pos'] = torch.tensor(graph_dict['node_labels']).float()
 
         g.add_edges(graph_dict['am'][0], graph_dict['am'][1])
 
@@ -147,8 +151,14 @@ def create_graph_histograph(file, representation='adj'):
 
     tree_gxl = ET.parse(file)
     root_gxl = tree_gxl.getroot()
+    graph_properties = []
     node_label = []
     node_id = []
+
+    for x_std in root_gxl.iter('attr'):
+        if x_std.get('name') == 'x_std' or x_std.get('name') == 'y_std':
+            graph_properties.append(float(x_std.find('float').text))
+
     for node in root_gxl.iter('node'):
         node_id += [node.get('id')]
         for attr in node.iter('attr'):
@@ -176,5 +186,5 @@ def create_graph_histograph(file, representation='adj'):
 
     am = row, col, data
 
-    return node_label, am
+    return graph_properties, node_label, am
 

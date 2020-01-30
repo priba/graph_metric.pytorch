@@ -16,7 +16,9 @@ def collate_fn_multiple_size(samples):
     # The input `samples` is a list of pairs
     #  (graph, label).
     graphs, labels = map(list, zip(*samples))
+    gdata = list(map(lambda g: g.gdata['std'], graphs))
     batched_graph = dgl.batch(graphs)
+    batched_graph.gdata = {'std': torch.stack(gdata)}
     return batched_graph, labels
 
 
@@ -31,14 +33,30 @@ def collate_fn_multiple_size_siamese(samples):
 
     if triplet:
         graphs1, graphs2, graphs3, labels = map(list, zip(*samples))
+
+        gdata = list(map(lambda g: g.gdata['std'], graphs1))
         batched_graph1 = dgl.batch(graphs1)
+        batched_graph1.gdata = {'std': torch.stack(gdata)}
+
+        gdata = list(map(lambda g: g.gdata['std'], graphs2))
         batched_graph2 = dgl.batch(graphs2)
+        batched_graph2.gdata = {'std': torch.stack(gdata)}
+
+        gdata = list(map(lambda g: g.gdata['std'], graphs3))
         batched_graph3 = dgl.batch(graphs3)
+        batched_graph3.gdata = {'std': torch.stack(gdata)}
+
         return batched_graph1, batched_graph2, batched_graph3, None
 
     graphs1, graphs2, labels = map(list, zip(*samples))
 
+    gdata = list(map(lambda g: g.gdata['std'], graphs1))
     batched_graph1 = dgl.batch(graphs1)
+    batched_graph1.gdata = {'std': torch.stack(gdata)}
+
+    gdata = list(map(lambda g: g.gdata['std'], graphs2))
     batched_graph2 = dgl.batch(graphs2)
+    batched_graph2.gdata = {'std': torch.stack(gdata)}
+
     return batched_graph1, batched_graph2, None, torch.tensor(labels)
 

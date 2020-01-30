@@ -44,7 +44,8 @@ def test(data_loader, gallery_loader, nets, cuda):
         target_gallery = []
         for j, (g, target) in enumerate(gallery_loader):
             if cuda:
-                g.ndata['h'] = g.ndata['h'].cuda()
+                g.ndata['pos'] = g.ndata['pos'].cuda()
+                g.gdata['std'] = g.gdata['std'].cuda()
 
             # Output
             g = net(g)
@@ -53,13 +54,16 @@ def test(data_loader, gallery_loader, nets, cuda):
             g_gallery.append(g)
 
         target_gallery = np.array(np.concatenate(target_gallery))
+        gdata = list(map(lambda g: g.gdata['std'], g_gallery))
         g_gallery = dgl.batch(g_gallery)
+        g_gallery.gdata = {'std': torch.cat(gdata)}
 
         target_query = []
         for i, (g, target) in enumerate(data_loader):
             # Prepare input data
             if cuda:
-                g.ndata['h'] = g.ndata['h'].cuda()
+                g.ndata['pos'] = g.ndata['pos'].cuda()
+                g.gdata['std'] = g.gdata['std'].cuda()
 
             # Output
             g  = net(g)

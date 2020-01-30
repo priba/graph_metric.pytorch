@@ -17,6 +17,8 @@ class SoftHd(nn.Module):
         super(SoftHd, self).__init__()
         self.ins_del_cost = nn.Sequential( nn.Linear(in_sz, 64),
                                            nn.ReLU(True),
+                                           nn.Linear(64, 64),
+                                           nn.ReLU(True),
                                            nn.Linear(64, 1))
         self.p = 2
 
@@ -36,10 +38,13 @@ class SoftHd(nn.Module):
         h1 = g1.ndata['h']
         h2 = g2.ndata['h']
 
-        dist_matrix = self.cdist(h1, h2, p=2)/2.0
+        p1 = g1.ndata['pos']
+        p2 = g2.ndata['pos']
 
-        d1 = torch.tanh(self.ins_del_cost(h1)).abs().squeeze()
-        d2 = torch.tanh(self.ins_del_cost(h2)).abs().squeeze()
+        dist_matrix = (self.cdist(p1, p2, p=2) + self.cdist(h1, h2, p=2))/2.0
+
+        d1 = self.ins_del_cost(h1).abs().squeeze()
+        d2 = self.ins_del_cost(h2).abs().squeeze()
 
         # \sum_{a\in set1} \inf_{b_\in set2} d(a,b)
         a, indA = dist_matrix.min(0)
@@ -65,15 +70,23 @@ class SoftHd(nn.Module):
         ''' mode:   'pairs' expect paired graphs, same for g1 and g2.
                     'retrieval' g1 is just one graph and computes the distance against all graphs in g2
         '''
+
         g1_list = dgl.unbatch(g1)
+        for i, g in enumerate(g1_list):
+            g.gdata = {}
+            g.gdata['std'] = g1.gdata['std'][i]
+
         g2_list = dgl.unbatch(g2)
+        for i, g in enumerate(g2_list):
+            g.gdata = {}
+            g.gdata['std'] = g2.gdata['std'][i]
 
         d = []
         for i in range(len(g2_list)):
             if mode == 'pairs':
                 d_aux = self.soft_hausdorff(g1_list[i], g2_list[i])
             elif mode == 'retrieval':
-                query = g1_list[0].local_var()
+                query = g1_list[0]
                 d_aux = self.soft_hausdorff(query, g2_list[i])
             else:
                 raise NameError(mode + ' not implemented!')

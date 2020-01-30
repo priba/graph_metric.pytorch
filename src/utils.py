@@ -22,10 +22,7 @@ def knn_accuracy(dist_matrix, target_gallery, target_query, k=5, dataset='gw'):
     # Predict
     _, ind = dist_matrix.sort(1)
     sort_target = target_gallery[ind.cpu()]
-    if  True: #dataset=='gw':
-        sort_target = sort_target[:,:k]
-    else:
-        sort_target = sort_target[:,1:k+1]
+    sort_target = sort_target[:,:k]
 
     # Counts
     counts = np.zeros(sort_target.shape)
@@ -51,17 +48,6 @@ def mean_average_precision(dist_matrix, target_gallery, target_query, dataset='g
 
     # Relevant items
     str_sim = (np.expand_dims(target_query, axis=1) == np.expand_dims(target_gallery, axis=0)) * 1
-
-    # Self comparison
-    if False: #dataset=='ak':
-        id_x, id_y = torch.where(sim==1)
-        new_sim = torch.zeros(sim.shape[0], sim.shape[1]-1).to(sim.device)
-        new_str_sim = np.zeros([sim.shape[0], sim.shape[1]-1])
-        for i in range(id_x.shape[0]):
-            new_sim[i] = torch.cat([sim[i,:id_y[i]], sim[i,id_y[i]+1:]])
-            new_str_sim[i] = np.concatenate([str_sim[i,:id_y[i]], str_sim[i,id_y[i]+1:]])
-        sim = new_sim
-        str_sim = new_str_sim
 
     num_cores = min(multiprocessing.cpu_count(), 32)
     aps = Parallel(n_jobs=num_cores)(delayed(average_precision_score)(str_sim[iq], sim[iq].cpu().numpy()) for iq in range(nq))

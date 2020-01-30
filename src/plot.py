@@ -28,31 +28,33 @@ __email__ = "priba@cvc.uab.cat"
 
 def plot(g1, g2, ind1, ind2, name1, name2, distance):
 
-    pos1 = dict(g1.nodes(data='h'))
-    pos1 = {k: v.numpy() for k, v in pos1.items()}
+#    pos1 = dict(g1.nodes(data='pos'))
+#    pos1 = {k: v.numpy() for k, v in pos1.items()}
 
-    pos2 = dict(g2.nodes(data='h'))
-    pos2 = {k: v.numpy() for k, v in pos2.items()}
+#    pos2 = dict(g2.nodes(data='pos'))
+#    pos2 = {k: v.numpy() for k, v in pos2.items()}
 
-    plt.subplot(221)
-    nx.draw(g1, pos=pos1, node_size=50)
-    plt.title(f"{name1}")
-    plt.gca().invert_yaxis()
+#    plt.subplot(221)
+#    nx.draw(g1, pos=pos1, node_size=50)
+#    plt.title(f"{name1}")
+#    plt.gca().invert_yaxis()
+#
+#    plt.subplot(222)
+#    nx.draw(g2, pos=pos2, node_size=50)
+#    plt.title(f"{name2}")
+#    plt.gca().invert_yaxis()
 
-    plt.subplot(222)
-    nx.draw(g2, pos=pos2, node_size=50)
-    plt.title(f"{name2}")
-    plt.gca().invert_yaxis()
-
-    plt.subplot(212)
+    plt.subplot(111)
 
     h = nx.disjoint_union(g1,g2)
 
     id_g1 = range(len(g1))
     id_g2 = range(len(g1), len(g1)+len(g2))
 
-    pos = dict(h.nodes(data='h'))
-    pos = {k: v.numpy() for k, v in pos.items()}
+    pos = dict(h.nodes(data='pos'))
+    pos = {k: v.cpu().numpy() for k, v in pos.items()}
+    for i in id_g2:
+        pos[i] += np.array([0,5])
 
     nx.draw_networkx_nodes(h, pos=pos, nodelist=id_g1, node_size=50,node_color='b')
     nx.draw_networkx_nodes(h, pos=pos, nodelist=id_g2, node_size=50,node_color='c')
@@ -112,13 +114,11 @@ def main(query, query_name,  target, target_name):
     distNet = distance.SoftHd(args.out_size)
 
     print('Check CUDA')
-    g1_orig = copy.deepcopy(g1)
-    g2_orig = copy.deepcopy(g2)
     if args.cuda:
         print('\t* CUDA')
         net, distNet = net.cuda(), distNet.cuda()
-        g1.ndata['h'] = g1.ndata['h'].cuda()
-        g2.ndata['h'] = g2.ndata['h'].cuda()
+        g1.ndata['pos'] = g1.ndata['pos'].cuda()
+        g2.ndata['pos'] = g2.ndata['pos'].cuda()
 
 
     if args.load is not None:
@@ -128,10 +128,10 @@ def main(query, query_name,  target, target_name):
         distNet.load_state_dict(checkpoint['state_dict_dist'])
 
     print('***PLOT***')
-    g1_out = net(g1)
-    g2_out = net(g2)
-    dist, indB, indA = distNet.soft_hausdorff(g1_out, g2_out, train=False)
-    plot(g1_orig.to_networkx(node_attrs=['h']).to_undirected(), g2_orig.to_networkx(node_attrs=['h']).to_undirected(), indB.tolist(), indA.tolist(), query_name, target_name, dist.item())
+    g1 = net(g1)
+    g2 = net(g2)
+    dist, indB, indA = distNet.soft_hausdorff(g1, g2, train=False)
+    plot(g1.to_networkx(node_attrs=['pos']).to_undirected(), g2.to_networkx(node_attrs=['pos']).to_undirected(), indB.tolist(), indA.tolist(), query_name, target_name, dist.item())
 
 if __name__ == '__main__':
     # Parse options
@@ -151,7 +151,6 @@ if __name__ == '__main__':
     if args.load is None:
         raise Exception('Cannot plot without loading a model.')
 
-    main(query='kq0202.p', query_name='WURDEN', target='kw000377.p', target_name='WURDEN')
-    main(query='kq0202.p', query_name='WURDEN', target='kw000218.p', target_name='VERLESEN')
-    main(query='kq0202.p', query_name='WÜRDEN', target='kw000377.p', target_name='WURDEN')
+    main(query='kq0089.p', query_name='HERRN', target='kw000544.p', target_name='HERRM')
+    main(query='kq0089.p', query_name='HERRN', target='kw001777.p', target_name='HERRM')
 

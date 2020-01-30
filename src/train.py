@@ -28,16 +28,6 @@ __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
 
 
-def adjust_learning_rate(optimizer, epoch):
-    """
-        Updates the learning rate given an schedule and a gamma parameter.
-    """
-    if epoch in args.schedule:
-        args.learning_rate *= args.gamma
-        for param_group in optimizer.param_groups:
-            param_group['lr'] = args.learning_rate
-
-
 def train(data_loader, nets, optimizer, cuda, criterion, epoch):
     batch_time = LogMetric.AverageMeter()
     batch_load_time = LogMetric.AverageMeter()
@@ -52,9 +42,11 @@ def train(data_loader, nets, optimizer, cuda, criterion, epoch):
     for i, (g1, g2, g3, target) in enumerate(data_loader):
         # Prepare input data
         if cuda:
-            g1.ndata['h'], g2.ndata['h'] = g1.ndata['h'].cuda(), g2.ndata['h'].cuda()
+            g1.ndata['pos'], g2.ndata['pos'] = g1.ndata['pos'].cuda(), g2.ndata['pos'].cuda()
+            g1.gdata['std'], g2.gdata['std'] = g1.gdata['std'].cuda(), g2.gdata['std'].cuda()
             if args.triplet:
-                g3.ndata['h'] = g3.ndata['h'].cuda()
+                g3.ndata['pos'] = g3.ndata['pos'].cuda()
+                g3.gdata['std'] = g3.gdata['std'].cuda()
             else:
                 target = target.cuda()
 
