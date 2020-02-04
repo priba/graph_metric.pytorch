@@ -39,22 +39,17 @@ def knn_accuracy(dist_matrix, target_gallery, target_query, k=5, dataset='gw'):
     return acc
 
 
-def mean_average_precision(dist_matrix, target_gallery, target_query, dataset='gw'):
+def mean_average_precision(dist_matrix, target_gallery, target_query):
     # Number of queries
     nq = target_query.shape[0]
 
-    # Distance to similarity
-    sim = 1/(1+dist_matrix)
+    aps = []
+    for q in range(nq):
+        _, indices = dist_matrix[q].sort()
+        rel = np.array(target_query[q] == target_gallery[indices.cpu()])
+        x=np.float32(np.cumsum(rel))/range(1,len(rel)+1)
+        aps.append( np.sum(x[rel])/(len(x[rel])+10**-7))
 
-    # Relevant items
-    str_sim = (np.expand_dims(target_query, axis=1) == np.expand_dims(target_gallery, axis=0)) * 1
-
-    num_cores = min(multiprocessing.cpu_count(), 32)
-    aps = Parallel(n_jobs=num_cores)(delayed(average_precision_score)(str_sim[iq], sim[iq].cpu().numpy()) for iq in range(nq))
-    # If str_sim is all 0, aps is nan
-    ind = [i for i, ap in enumerate(aps) if np.isnan(ap)]
-    for i in sorted(ind, reverse=True):
-        del aps[i]
     return np.mean(aps)
 
 # Checkpoints
