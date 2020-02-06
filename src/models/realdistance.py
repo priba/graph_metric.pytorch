@@ -13,7 +13,7 @@ __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
 
 class HausdorffEditDistance(nn.Module):
-    def __init__(self, alpha=0.5, beta=0.1, tau_n=4., tau_e=16.):
+    def __init__(self, alpha=0.5, beta=0.1, tau_n=.5, tau_e=2.):
         super(HausdorffEditDistance, self).__init__()
         self.register_buffer('alpha', torch.tensor([alpha]))
         self.register_buffer('beta', torch.tensor([beta, 1-beta]).unsqueeze(0).unsqueeze(0))
@@ -28,9 +28,8 @@ class HausdorffEditDistance(nn.Module):
         Output: dist is a NxM matrix where dist[i,j] is the square norm between x[i,:] and y[j,:]
         Source: https://discuss.pytorch.org/t/efficient-distance-matrix-computation/9065/2
         '''
-        xx = set1.unsqueeze(1).expand((set1.size(0), set2.size(0), set1.size(1)))
-        yy = set2.unsqueeze(0).expand_as(xx)
-        return (xx - yy).abs().pow(p)
+        dist = set1.unsqueeze(1) - set2.unsqueeze(0)
+        return dist.abs().pow(p)
 
 
     def soft_hausdorff(self, g1, g2, train=True):
@@ -41,11 +40,11 @@ class HausdorffEditDistance(nn.Module):
 
         # Deletion
         d1_edges = g1.in_degrees().to(device).to(dtype)
-        d1 = self.tau_n + d1_edges*self.tau_e/2.
+        d1 = self.alpha*self.tau_n + (1-self.alpha)*d1_edges*self.tau_e/2.
 
         # Insertion
         d2_edges = g2.in_degrees().to(device).to(dtype)
-        d2 = self.tau_n + d2_edges*self.tau_e/2.
+        d2 = self.alpha*self.tau_n + (1-self.alpha)*d2_edges*self.tau_e/2.
 
         # Substitution
         beta = self.beta*g1.gdata['std']
@@ -56,7 +55,7 @@ class HausdorffEditDistance(nn.Module):
 
         # Edges HED
         edges_hed = g1.in_degrees().unsqueeze(1)-g2.in_degrees().unsqueeze(0)
-        edges_hed = self.tau_e*edges_hed.to(device).to(dtype).abs()
+        edges_hed = (1-self.alpha)*self.tau_e*edges_hed.to(device).to(dtype).abs()
 
         dist_matrix = dist_matrix + edges_hed/2
         dist_matrix = dist_matrix/2.

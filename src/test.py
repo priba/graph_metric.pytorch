@@ -15,7 +15,7 @@ import os
 # Own modules
 from options import Options
 from Logger import LogMetric
-from utils import load_checkpoint, knn_accuracy, mean_average_precision
+from utils import load_checkpoint, knn_accuracy, mean_average_precision, mean_average_precision_Bo
 from models import models, distance
 from data.load_data import load_data
 from loss.contrastive import ContrastiveLoss, TripletLoss
@@ -28,6 +28,7 @@ def test(data_loader, gallery_loader, nets, cuda):
     batch_time = LogMetric.AverageMeter()
     acc = LogMetric.AverageMeter()
     meanap = LogMetric.AverageMeter()
+    meanapbo = LogMetric.AverageMeter()
 
     net, distance = nets
 
@@ -84,9 +85,12 @@ def test(data_loader, gallery_loader, nets, cuda):
 
         # mAP retrieval
         meanap.update(mean_average_precision(dist_matrix, target_gallery, target_query))
+        meanapbo.update(mean_average_precision_Bo(dist_matrix, target_gallery, target_query))
     batch_time.update(time.time()-start)
-    print('* Test Acc {acc.avg:.3f}; mAP {meanap.avg: .3f}; Time x Test {b_time.avg:.3f}'
-            .format(acc=acc, meanap=meanap, b_time=batch_time))
+    #print('* Test Acc {acc.avg:.3f}; mAP {meanap.avg: .3f}; Time x Test {b_time.avg:.3f}'
+    #        .format(acc=acc, meanap=meanap, b_time=batch_time))
+    print('* Test Acc {acc.avg:.3f}; mAP {meanap.avg: .3f}; mAP {meanapbo.avg: .3f}; Time x Test {b_time.avg:.3f}'
+            .format(acc=acc, meanap=meanap, meanapbo=meanapbo, b_time=batch_time))
     return acc, meanap
 
 
