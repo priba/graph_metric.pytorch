@@ -13,7 +13,7 @@ __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
 
 class HausdorffEditDistance(nn.Module):
-    def __init__(self, alpha=0.5, beta=0.1, tau_n=.5, tau_e=2.):
+    def __init__(self, alpha=0.5, beta=0.1, tau_n=4., tau_e=16.):
         super(HausdorffEditDistance, self).__init__()
         self.register_buffer('alpha', torch.tensor([alpha]))
         self.register_buffer('beta', torch.tensor([beta, 1-beta]).unsqueeze(0).unsqueeze(0))
@@ -21,7 +21,7 @@ class HausdorffEditDistance(nn.Module):
         self.register_buffer('tau_e', torch.tensor([tau_e]))
         self.p = 2
 
-    def cdist(self, set1, set2, p=2.0):
+    def cdist(self, set1, set2):
         ''' Pairwise Distance between two matrices
         Input:  x is a Nxd matrix
                 y is an optional Mxd matirx
@@ -29,10 +29,15 @@ class HausdorffEditDistance(nn.Module):
         Source: https://discuss.pytorch.org/t/efficient-distance-matrix-computation/9065/2
         '''
         dist = set1.unsqueeze(1) - set2.unsqueeze(0)
-        return dist.abs().pow(p)
+        return dist.abs()
 
 
     def soft_hausdorff(self, g1, g2, train=True):
+        if g1.number_of_nodes() < g2.number_of_nodes():
+            tmp = g2
+            g2 = g1
+            g1 = tmp
+
         p1 = g1.ndata['pos']
         p2 = g2.ndata['pos']
         device = p1.device
@@ -47,10 +52,9 @@ class HausdorffEditDistance(nn.Module):
         d2 = self.alpha*self.tau_n + (1-self.alpha)*d2_edges*self.tau_e/2.
 
         # Substitution
-        beta = self.beta*g1.gdata['std']
-
-        dist_matrix = self.cdist(p1, p2, p=2)
-        dist_matrix = beta*dist_matrix
+        dist_matrix = self.cdist(p1, p2)
+        dist_matrix = g1.gdata['std']*dist_matrix
+        dist_matrix = self.beta*dist_matrix.pow(2.)
         dist_matrix = self.alpha*dist_matrix.sum(-1).sqrt()
 
         # Edges HED
@@ -71,7 +75,7 @@ class HausdorffEditDistance(nn.Module):
         #d = a.mean() + b.mean()
         d = a.sum() + b.sum()
 
-        upper_bound = (g1.number_of_nodes() - g2.number_of_nodes())*self.tau_n
+        upper_bound = self.alpha*(g1.number_of_nodes() - g2.number_of_nodes())*self.tau_n
         upper_bound = upper_bound.abs()
         if d < upper_bound:
             d = upper_bound.squeeze()
