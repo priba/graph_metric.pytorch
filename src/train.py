@@ -130,7 +130,7 @@ def main():
         for epoch in range(start_epoch, args.epochs):
 
             loss_train = train(train_loader, [net, distNet], optimizer, args.cuda, criterion, epoch)
-            acc_valid, map_valid = test(valid_loader, valid_gallery_loader, [net, distNet], args.cuda)
+            acc_valid, map_valid = test(valid_loader, valid_gallery_loader, [net, distNet], args.cuda, validation=True)
 
             # Early-Stop + Save model
             if map_valid.avg > best_perf:

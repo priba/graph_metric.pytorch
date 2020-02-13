@@ -24,7 +24,7 @@ import dgl
 __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
 
-def test(data_loader, gallery_loader, nets, cuda):
+def test(data_loader, gallery_loader, nets, cuda, validation=False):
     batch_time = LogMetric.AverageMeter()
     acc = LogMetric.AverageMeter()
     meanap = LogMetric.AverageMeter()
@@ -75,12 +75,16 @@ def test(data_loader, gallery_loader, nets, cuda):
         dist_matrix = torch.stack(dist_matrix)
         target_query = np.array(np.concatenate(target_query))
 
-        target_combined_query = np.unique(target_query)
-        combined_dist_matrix = torch.zeros(target_combined_query.shape[0], dist_matrix.shape[1])
+        if validation:
+            target_combined_query = target_query
+            combined_dist_matrix = dist_matrix
+        else:
+            target_combined_query = np.unique(target_query)
+            combined_dist_matrix = torch.zeros(target_combined_query.shape[0], dist_matrix.shape[1])
 
-        for i, kw in enumerate(target_combined_query):
-            ind = kw == target_query
-            combined_dist_matrix[i] = dist_matrix[ind].min(0).values
+            for i, kw in enumerate(target_combined_query):
+                ind = kw == target_query
+                combined_dist_matrix[i] = dist_matrix[ind].min(0).values
 
         # K-NN classifier
         acc.update(knn_accuracy(combined_dist_matrix, target_gallery, target_combined_query, k=5, dataset=data_loader.dataset.dataset))
