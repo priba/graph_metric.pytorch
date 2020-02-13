@@ -15,36 +15,46 @@ __email__ = "priba@cvc.uab.cat"
 class SoftHd(nn.Module):
     def __init__(self, in_sz):
         super(SoftHd, self).__init__()
-        self.ins_del_cost = nn.Sequential( nn.Linear(in_sz, 64),
-                                           nn.ReLU(True),
-                                           nn.Linear(64, 64),
+        self.node_ins_del_cost = nn.Sequential( nn.Linear(in_sz, 64),
                                            nn.ReLU(True),
                                            nn.Linear(64, 1))
+#        self.edge_ins_del_cost = nn.Sequential( nn.Linear(in_sz, 64),
+#                                           nn.ReLU(True),
+#                                           nn.Linear(64, 1))
         self.p = 2
 
-    def cdist(self, set1, set2, p=2.0):
+    def cdist(self, set1, set2):
         ''' Pairwise Distance between two matrices
         Input:  x is a Nxd matrix
                 y is an optional Mxd matirx
         Output: dist is a NxM matrix where dist[i,j] is the square norm between x[i,:] and y[j,:]
         Source: https://discuss.pytorch.org/t/efficient-distance-matrix-computation/9065/2
         '''
-        xx = set1.unsqueeze(1).expand((set1.size(0), set2.size(0), set1.size(1)))
-        yy = set2.unsqueeze(0).expand_as(xx)
-        return (xx - yy).abs().pow(p).sum(-1)
+        dist = set1.unsqueeze(1) - set2.unsqueeze(0)
+        return dist.abs()
 
 
     def soft_hausdorff(self, g1, g2, train=True):
+        if g1.number_of_nodes() < g2.number_of_nodes():
+            tmp = g2
+            g2 = g1
+            g1 = tmp
+
         h1 = g1.ndata['h']
         h2 = g2.ndata['h']
 
         p1 = g1.ndata['pos']
         p2 = g2.ndata['pos']
 
-        dist_matrix = (self.cdist(p1, p2, p=2) + self.cdist(h1, h2, p=2))/2.0
+        spatial_dist = self.cdist(p1, p2)
+        spatial_dist = spatial_dist.pow(2.).sum(-1).sqrt()
 
-        d1 = self.ins_del_cost(h1).abs().squeeze()
-        d2 = self.ins_del_cost(h2).abs().squeeze()
+        feature_dist = self.cdist(h1, h2).pow(2.).sum(-1)
+
+        dist_matrix = spatial_dist + feature_dist
+
+        d1 = self.node_ins_del_cost(h1).pow(2).squeeze()
+        d2 = self.node_ins_del_cost(h2).pow(2).squeeze()
 
         # \sum_{a\in set1} \inf_{b_\in set2} d(a,b)
         a, indA = dist_matrix.min(0)
