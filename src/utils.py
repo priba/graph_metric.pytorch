@@ -39,7 +39,7 @@ def knn_accuracy(dist_matrix, target_gallery, target_query, k=5, dataset='gw'):
     return acc
 
 
-def mean_average_precision_Bo(dist_matrix, target_gallery, target_query):
+def mean_average_precision(dist_matrix, target_gallery, target_query):
     # Number of queries
     nq = target_query.shape[0]
 
@@ -53,24 +53,24 @@ def mean_average_precision_Bo(dist_matrix, target_gallery, target_query):
     return np.mean(aps)
 
 
-def mean_average_precision(dist_matrix, target_gallery, target_query):
-    # Number of queries
-    nq = target_query.shape[0]
-
-    interpolation_points = np.linspace(0,1,11)
-
-    aps = []
-    for q in range(nq):
-        _, indices = dist_matrix[q].sort()
-        rel = np.array(target_query[q] == target_gallery[indices.cpu()])
-
-        recall = np.float32(np.cumsum(rel))/rel.sum()
-        precision = np.float32(np.cumsum(rel))/range(1,len(rel)+1)
-
-        prec = [precision[recall>=i].max() for i in interpolation_points]
-        aps.append( np.mean(prec))
-
-    return np.mean(aps)
+# def mean_average_precision(dist_matrix, target_gallery, target_query):
+#     # Number of queries
+#     nq = target_query.shape[0]
+#
+#     interpolation_points = np.linspace(0,1,11)
+#
+#     aps = []
+#     for q in range(nq):
+#         _, indices = dist_matrix[q].sort()
+#         rel = np.array(target_query[q] == target_gallery[indices.cpu()])
+#
+#         recall = np.float32(np.cumsum(rel))/rel.sum()
+#         precision = np.float32(np.cumsum(rel))/range(1,len(rel)+1)
+#
+#         prec = [precision[recall>=i].max() for i in interpolation_points]
+#         aps.append( np.mean(prec))
+#
+#     return np.mean(aps)
 
 # Checkpoints
 def save_checkpoint(state, directory, file_name):

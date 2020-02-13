@@ -16,7 +16,7 @@ import argparse
 # Own modules
 from options import Options
 from Logger import LogMetric
-from utils import load_checkpoint, knn_accuracy, mean_average_precision, mean_average_precision_Bo
+from utils import load_checkpoint, knn_accuracy, mean_average_precision
 from models import models, realdistance
 from data.load_data import load_data
 import dgl
@@ -28,7 +28,6 @@ def test(data_loader, gallery_loader, distance, cuda):
     batch_time = LogMetric.AverageMeter()
     acc = LogMetric.AverageMeter()
     meanap = LogMetric.AverageMeter()
-    meanapbo = LogMetric.AverageMeter()
 
     end = time.time()
     distance.eval()
@@ -53,6 +52,7 @@ def test(data_loader, gallery_loader, distance, cuda):
 
         target_query = []
         for i, (g, target) in enumerate(data_loader):
+
             # Prepare input data
             if cuda:
                 g.to(torch.device('cuda'))
@@ -67,22 +67,27 @@ def test(data_loader, gallery_loader, distance, cuda):
         dist_matrix = torch.stack(dist_matrix)
         target_query = np.array(np.concatenate(target_query))
 
+        target_combined_query = np.unique(target_query)
+        combined_dist_matrix = torch.zeros(target_combined_query.shape[0], dist_matrix.shape[1])
+
+        for i, kw in enumerate(target_combined_query):
+            ind = kw == target_query
+            combined_dist_matrix[i] = dist_matrix[ind].min(0).values
 
         # K-NN classifier
-        acc.update(knn_accuracy(dist_matrix, target_gallery, target_query, k=5, dataset=data_loader.dataset.dataset))
+        acc.update(knn_accuracy(combined_dist_matrix, target_gallery, target_combined_query, k=5, dataset=data_loader.dataset.dataset))
 
         # mAP retrieval
-        meanap.update(mean_average_precision(dist_matrix, target_gallery, target_query))
-        meanapbo.update(mean_average_precision_Bo(dist_matrix, target_gallery, target_query))
+        meanap.update(mean_average_precision(combined_dist_matrix, target_gallery, target_combined_query))
     batch_time.update(time.time()-start)
-    print('* Test Acc {acc.avg:.3f}; mAP {meanap.avg: .3f}; mAP {meanapbo.avg: .3f}; Time x Test {b_time.avg:.3f}'
-            .format(acc=acc, meanap=meanap, meanapbo=meanapbo, b_time=batch_time))
+    print('* Test Acc {acc.avg:.3f}; mAP {meanap.avg: .3f}; Time x Test {b_time.avg:.3f}'
+            .format(acc=acc, meanap=meanap, b_time=batch_time))
     return acc, meanap
 
 
 def main():
     print('Prepare data')
-    train_loader, valid_loader, valid_gallery_loader, test_loader, test_gallery_loader, in_size = load_data(args.dataset, args.data_path, batch_size=args.batch_size, prefetch=args.prefetch)
+    train_loader, valid_loader, valid_gallery_loader, test_loader, test_gallery_loader, in_size = load_data(args.dataset, args.data_path, batch_size=args.batch_size, prefetch=args.prefetch, set_partition=args.set_partition)
 
     distance = realdistance.HausdorffEditDistance(alpha=args.alpha, beta=args.beta, tau_n=args.tau_n, tau_e=args.tau_e)
 

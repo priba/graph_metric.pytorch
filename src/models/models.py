@@ -27,7 +27,6 @@ class GNN(nn.Module):
         h = self.layers(g, h, torch.zeros(g.edges()[0].shape[0]))
         h = self.last_layer(h)
 
-        h = torch.tanh(h)
         g.ndata['h'] = h
 
         return g

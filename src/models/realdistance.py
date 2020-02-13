@@ -17,8 +17,8 @@ class HausdorffEditDistance(nn.Module):
         super(HausdorffEditDistance, self).__init__()
         self.register_buffer('alpha', torch.tensor([alpha]))
         self.register_buffer('beta', torch.tensor([beta, 1-beta]).unsqueeze(0).unsqueeze(0))
-        self.register_buffer('tau_n', torch.tensor([tau_n]))
-        self.register_buffer('tau_e', torch.tensor([tau_e]))
+        self.register_buffer('tau_n', torch.tensor([alpha*tau_n]))
+        self.register_buffer('tau_e', torch.tensor([(1-alpha)*tau_e]))
         self.p = 2
 
     def cdist(self, set1, set2):
@@ -45,11 +45,11 @@ class HausdorffEditDistance(nn.Module):
 
         # Deletion
         d1_edges = g1.in_degrees().to(device).to(dtype)
-        d1 = self.alpha*self.tau_n + (1-self.alpha)*d1_edges*self.tau_e/2.
+        d1 = self.tau_n + d1_edges*self.tau_e/2.
 
         # Insertion
         d2_edges = g2.in_degrees().to(device).to(dtype)
-        d2 = self.alpha*self.tau_n + (1-self.alpha)*d2_edges*self.tau_e/2.
+        d2 = self.tau_n + d2_edges*self.tau_e/2.
 
         # Substitution
         dist_matrix = self.cdist(p1, p2)
@@ -59,7 +59,7 @@ class HausdorffEditDistance(nn.Module):
 
         # Edges HED
         edges_hed = g1.in_degrees().unsqueeze(1)-g2.in_degrees().unsqueeze(0)
-        edges_hed = (1-self.alpha)*self.tau_e*edges_hed.to(device).to(dtype).abs()
+        edges_hed = self.tau_e*edges_hed.to(device).to(dtype).abs()
 
         dist_matrix = dist_matrix + edges_hed/2
         dist_matrix = dist_matrix/2.
@@ -75,12 +75,12 @@ class HausdorffEditDistance(nn.Module):
         #d = a.mean() + b.mean()
         d = a.sum() + b.sum()
 
-        upper_bound = self.alpha*(g1.number_of_nodes() - g2.number_of_nodes())*self.tau_n
+        upper_bound = (g1.number_of_nodes() - g2.number_of_nodes())*self.tau_n
         upper_bound = upper_bound.abs()
         if d < upper_bound:
             d = upper_bound.squeeze()
 
-        normalization = (self.tau_n*(g1.number_of_nodes() + g2.number_of_nodes()) + self.tau_e*(g1.number_of_edges() + g2.number_of_edges()))
+        normalization = (self.tau_n*(g1.number_of_nodes() + g2.number_of_nodes()) + self.tau_e*(g1.number_of_edges() + g2.number_of_edges())/2)
         d = d/normalization.squeeze()
 
         if train:
