@@ -101,7 +101,7 @@ def main():
     distNet = distance.SoftHd(args.out_size)
 
     optimizer = torch.optim.Adam(list(net.parameters())+list(distNet.parameters()), args.learning_rate, weight_decay=args.decay)
-    scheduler = StepLR(optimizer, 10, gamma = args.gamma)
+    scheduler = StepLR(optimizer, 5, gamma = args.gamma)
 
     print('Check CUDA')
     if args.cuda and args.ngpu > 1:

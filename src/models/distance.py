@@ -67,7 +67,8 @@ class SoftHd(nn.Module):
 
         #d = a.mean() + b.mean()
         d = a.sum() + b.sum()
-        d = d/(d1.sum() + d2.sum()) # (a.shape[0] + b.shape[0])
+        # d = d/(d1.sum() + d2.sum()) # (a.shape[0] + b.shape[0])
+        d = d/(a.shape[0] + b.shape[0])
 
         if train:
             return d
