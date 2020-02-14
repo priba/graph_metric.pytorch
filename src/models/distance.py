@@ -35,10 +35,10 @@ class SoftHd(nn.Module):
 
 
     def soft_hausdorff(self, g1, g2, train=True):
-        if g1.number_of_nodes() < g2.number_of_nodes():
-            tmp = g2
-            g2 = g1
-            g1 = tmp
+#        if g1.number_of_nodes() < g2.number_of_nodes():
+#            tmp = g2
+#            g2 = g1
+#            g1 = tmp
 
         h1 = g1.ndata['h']
         h2 = g2.ndata['h']
@@ -46,15 +46,16 @@ class SoftHd(nn.Module):
         p1 = g1.ndata['pos']
         p2 = g2.ndata['pos']
 
-        spatial_dist = self.cdist(p1, p2)
-        spatial_dist = spatial_dist.pow(2.).sum(-1).sqrt()
+#        spatial_dist = self.cdist(p1, p2)
+#        spatial_dist = spatial_dist.pow(2.).sum(-1).sqrt()
 
-        feature_dist = self.cdist(h1, h2).pow(2.).sum(-1)
+        feature_dist = self.cdist(h1, h2).pow(2.).sum(-1)/2
+        dist_matrix = feature_dist
 
-        dist_matrix = spatial_dist + feature_dist
+#        dist_matrix = spatial_dist + feature_dist
 
-        d1 = self.node_ins_del_cost(h1).pow(2).squeeze()
-        d2 = self.node_ins_del_cost(h2).pow(2).squeeze()
+        d1 = self.node_ins_del_cost(h1).abs().squeeze()
+        d2 = self.node_ins_del_cost(h2).abs().squeeze()
 
         # \sum_{a\in set1} \inf_{b_\in set2} d(a,b)
         a, indA = dist_matrix.min(0)
