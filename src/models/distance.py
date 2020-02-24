@@ -46,16 +46,16 @@ class SoftHd(nn.Module):
         p1 = g1.ndata['pos']
         p2 = g2.ndata['pos']
 
-#        spatial_dist = self.cdist(p1, p2)
-#        spatial_dist = spatial_dist.pow(2.).sum(-1).sqrt()
+        spatial_dist = self.cdist(p1, p2)
+        spatial_dist = spatial_dist.pow(2.).sum(-1)
 
-        feature_dist = self.cdist(h1, h2).pow(2.).sum(-1)/2
-        dist_matrix = feature_dist
+        feature_dist = self.cdist(h1, h2).pow(2.).sum(-1)
+        dist_matrix = (spatial_dist + feature_dist) / 2
 
 #        dist_matrix = spatial_dist + feature_dist
 
-        d1 = self.node_ins_del_cost(h1).abs().squeeze()
-        d2 = self.node_ins_del_cost(h2).abs().squeeze()
+        d1 = 0.5 + self.node_ins_del_cost(h1).abs().squeeze()
+        d2 = 0.5 + self.node_ins_del_cost(h2).abs().squeeze()
 
         # \sum_{a\in set1} \inf_{b_\in set2} d(a,b)
         a, indA = dist_matrix.min(0)
