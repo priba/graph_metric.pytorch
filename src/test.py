@@ -79,6 +79,7 @@ def test(data_loader, gallery_loader, nets, cuda, validation=False):
             target_combined_query = target_query
             combined_dist_matrix = dist_matrix
         else:
+            print('* Test No combine mAP {}'.format(mean_average_precision(dist_matrix, target_gallery, target_query)))
             target_combined_query = np.unique(target_query)
             combined_dist_matrix = torch.zeros(target_combined_query.shape[0], dist_matrix.shape[1])
 
