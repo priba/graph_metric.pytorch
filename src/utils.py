@@ -47,8 +47,9 @@ def mean_average_precision(dist_matrix, target_gallery, target_query):
     for q in range(nq):
         _, indices = dist_matrix[q].sort()
         rel = np.array(target_query[q] == target_gallery[indices.cpu()])
-        x=np.float32(np.cumsum(rel))/range(1,len(rel)+1)
-        aps.append( np.sum(x[rel])/(len(x[rel])+10**-7))
+        if rel.any():
+            x=np.float32(np.cumsum(rel))/range(1,len(rel)+1)
+            aps.append( np.sum(x[rel])/(len(x[rel])+10**-7))
 
     return np.mean(aps)
 
