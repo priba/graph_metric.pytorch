@@ -56,6 +56,7 @@ class HistoGraph_train(data.Dataset):
             # Graph 3
             g3 = self._loadgraph(neg_ind[0])
             target_neg = self.labels[neg_ind[0]]
+
             return g1, g2, g3, torch.Tensor([])
 
         target = torch.FloatTensor([0.0]) if target1 == target2 else torch.FloatTensor([1.0])
@@ -74,6 +75,10 @@ class HistoGraph_train(data.Dataset):
 
         g.add_nodes(graph_dict['node_labels'].shape[0])
         g.ndata['pos'] = torch.tensor(graph_dict['node_labels']).float()
+        if g.number_of_nodes() == 0:
+            g.add_nodes(1, {'pos': torch.zeros(1,2)})
+            g.gdata['std'] = torch.zeros(2)
+
 
         g.add_edges(graph_dict['am'][0], graph_dict['am'][1])
 
@@ -125,6 +130,9 @@ class HistoGraph(data.Dataset):
 
         g.add_nodes(graph_dict['node_labels'].shape[0])
         g.ndata['pos'] = torch.tensor(graph_dict['node_labels']).float()
+        if g.number_of_nodes() == 0:
+            g.add_nodes(1, {'pos': torch.zeros(1,2)})
+            g.gdata['std'] = torch.zeros(2)
 
         g.add_edges(graph_dict['am'][0], graph_dict['am'][1])
 
