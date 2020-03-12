@@ -36,9 +36,9 @@ class GNN(nn.Module):
         return g
 
 
-class GNN_RNN(nn.Module):
+class GNN_GRU(nn.Module):
     def __init__(self, in_dim, hidden_dim, out_dim, heads=4, dropout=0.3):
-        super(GNN_RNN, self).__init__()
+        super(GNN_GRU, self).__init__()
 
         self.embedding = nn.Linear(in_dim, out_dim)
         self.edge_embedding = EdgeConv(hidden_dim, hidden_dim, activation=torch.relu)
