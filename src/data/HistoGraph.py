@@ -110,6 +110,15 @@ class HistoGraph(data.Dataset):
                 del self.labels[index]
                 del self.graphs[index]
 
+            if 'PAR' in self.root:
+                u_labels = np.unique(self.labels)
+                for lab in u_labels:
+                    idx_del = np.where(lab == np.array(self.labels))[0]
+                    for index in reversed(range(1, len(idx_del))):
+                        del self.labels[idx_del[index]]
+                        del self.graphs[idx_del[index]]
+
+
     def __getitem__(self, index):
         # Graph
         g = self._loadgraph(index)
