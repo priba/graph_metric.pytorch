@@ -40,8 +40,8 @@ def load_data(dataset, data_path, triplet=False, batch_size=32, prefetch=4, set_
         node_size=2
         return train_loader, valid_loader, gallery_loader, test_loader, gallery_loader, node_size
     elif dataset == 'histograph-gw':
-        data_train, queries, gallery_valid, gallery_test = load_histograph_gw(data_path, triplet, set_partition=set_partition)
-        print_statistics(data_train, queries, gallery_valid, queries, gallery_test)
+        data_train, queries_valid, gallery_valid, queries_test, gallery_test = load_histograph_gw(data_path, triplet, set_partition=set_partition)
+        print_statistics(data_train, queries_valid, gallery_valid, queries_test, gallery_test)
 
         if triplet:
             anchors = np.array([data_train.labels[g[0]] for g in data_train.groups])
@@ -60,11 +60,12 @@ def load_data(dataset, data_path, triplet=False, batch_size=32, prefetch=4, set_
             batch_size = 4*batch_size
 
         # Load same numbers of graphs that are asked in training
-        queries_loader = DataLoader(queries, batch_size=1, collate_fn=du.collate_fn_multiple_size, shuffle=False)
+        valid_queries_loader = DataLoader(queries_valid, batch_size=1, collate_fn=du.collate_fn_multiple_size, shuffle=False)
         valid_gallery_loader = DataLoader(gallery_valid, batch_size=batch_size, collate_fn=du.collate_fn_multiple_size, num_workers=prefetch, shuffle=False)
+        test_queries_loader = DataLoader(queries_test, batch_size=1, collate_fn=du.collate_fn_multiple_size, shuffle=False)
         test_gallery_loader = DataLoader(gallery_test, batch_size=batch_size, collate_fn=du.collate_fn_multiple_size, num_workers=prefetch, shuffle=False)
         node_size=2
-        return train_loader, queries_loader, valid_gallery_loader, queries_loader, test_gallery_loader, node_size
+        return train_loader, valid_queries_loader, valid_gallery_loader, test_queries_loader, test_gallery_loader, node_size
     elif dataset == 'histograph-ak':
         data_train, queries_valid, gallery_valid, queries_test, gallery_test = load_histograph_ak(data_path, triplet)
         print_statistics(data_train, queries_valid, gallery_valid, queries_test, gallery_test)
@@ -143,17 +144,20 @@ def load_histograph_gw(data_path, triplet=False, set_partition='cv1'):
     gt_path = os.path.join(data_path, os.pardir, '00_GroundTruth', set_partition)
     data_train = HistoGraph_train(pickle_dir, os.path.join(gt_path,'train.txt'), triplet)
 
-    gallery_valid = HistoGraph(pickle_dir, os.path.join(gt_path, 'valid.txt'), dataset='gw')
-    gallery_test = HistoGraph(pickle_dir, os.path.join(gt_path, 'test.txt'), dataset='gw')
+    gallery_valid = HistoGraph(pickle_dir, os.path.join(gt_path, 'valid.txt'), subset='valid')
+    gallery_test = HistoGraph(pickle_dir, os.path.join(gt_path, 'test.txt'), subset='test')
 
-    queries = HistoGraph(pickle_dir, os.path.join(gt_path, 'train.txt'), os.path.join(gt_path, 'keywords.txt'), dataset='gw')
+    queries_valid = HistoGraph(pickle_dir, os.path.join(gt_path, 'train.txt'), os.path.join(gt_path, 'keywords.txt'), subset='valid')
+    queries_test = HistoGraph(pickle_dir, os.path.join(gt_path, 'train.txt'), os.path.join(gt_path, 'keywords.txt'), subset='test')
+
     # Get labels to create a unique identifier
-    unique_labels = np.unique(np.concatenate((queries.getlabels(), gallery_valid.getlabels(), gallery_test.getlabels())))
+    unique_labels = np.unique(np.concatenate((queries_valid.getlabels(), gallery_valid.getlabels(), queries_test.getlabels(), gallery_test.getlabels())))
     ulabels_dict = {l:i for i, l in enumerate(unique_labels)}
     gallery_valid.setlabelsdict(ulabels_dict)
     gallery_test.setlabelsdict(ulabels_dict)
-    queries.setlabelsdict(ulabels_dict)
-    return data_train, queries, gallery_valid, gallery_test
+    queries_valid.setlabelsdict(ulabels_dict)
+    queries_test.setlabelsdict(ulabels_dict)
+    return data_train, queries_valid, gallery_valid, queries_test, gallery_test
 
 
 def load_histograph_ak(data_path, triplet=False):
@@ -172,10 +176,10 @@ def load_histograph_ak(data_path, triplet=False):
     gt_path = os.path.join(data_path, os.pardir, '00_GroundTruth' )
     data_train = HistoGraph_train(os.path.join(pickle_dir, '01_Train_I'), os.path.join(gt_path, '01_Train_I', 'words.txt'), triplet)
 
-    gallery_valid = HistoGraph(os.path.join(pickle_dir, '01_Train_I'), os.path.join(gt_path, '01_Train_I', 'words.txt'), dataset='ak')
+    gallery_valid = HistoGraph(os.path.join(pickle_dir, '01_Train_I'), os.path.join(gt_path, '01_Train_I', 'words.txt'), subset='valid')
     gallery_test = HistoGraph(os.path.join(pickle_dir, '02_Test'), os.path.join(gt_path, '02_Test', 'words.txt'))
 
-    queries_valid = HistoGraph(os.path.join(pickle_dir, '01_Train_I'), os.path.join(gt_path, '01_Train_I', 'words.txt'), os.path.join(gt_path, '02_Test', 'queries.txt'), dataset='ak')
+    queries_valid = HistoGraph(os.path.join(pickle_dir, '01_Train_I'), os.path.join(gt_path, '01_Train_I', 'words.txt'), os.path.join(gt_path, '02_Test', 'queries.txt'), subset='valid')
     queries_test = HistoGraph(os.path.join(pickle_dir, '02_Test'), os.path.join(gt_path, '02_Test', 'queries.txt'))
 
     # Get labels to create a unique identifier
