@@ -93,7 +93,7 @@ def test(data_loader, gallery_loader, nets, cuda, validation=False):
         # mAP retrieval
         meanap.update(mean_average_precision(combined_dist_matrix, target_gallery, target_combined_query))
     batch_time.update(time.time()-start)
-    print('* Test Acc {acc.avg:.3f}; mAP {meanap.avg: .3f}; Time x Test {b_time.avg:.3f}'
+    print('* Test Acc {acc.avg:.3f}; mAP {meanap.avg: .5f}; Time x Test {b_time.avg:.3f}'
             .format(acc=acc, meanap=meanap, b_time=batch_time))
     return acc, meanap
 
