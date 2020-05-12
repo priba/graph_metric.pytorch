@@ -7,6 +7,7 @@ from . import data_utils as du
 import os
 import itertools
 import pickle
+import dgl
 
 __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
@@ -32,26 +33,49 @@ class Iam_train(data.Dataset):
 
     def __getitem__(self, index):
         ind = self.groups[index]
-        
+
         # Graph 1
-        node_labels1, am1 = self._loadgraph(ind[0])
+        g1 = self._loadgraph(ind[0])
         target1 = self.labels[ind[0]]
-        
+
         # Graph 2
-        node_labels2, am2 = self._loadgraph(ind[1])
+        g2 = self._loadgraph(ind[1])
         target2 = self.labels[ind[1]]
+
         if self.triplet:
-            neg_ind = np.random.choice(np.where(self.labels!=target1)[0], 1)
+            possible_ind = np.where(self.labels!=target1)[0]
+            neg_ind = np.random.choice(possible_ind, 1)
+
             # Graph 3
-            node_labels3, am3 = self._loadgraph(neg_ind[0])
-            return (node_labels1, am1), (node_labels2, am2), (node_labels3, am3), torch.Tensor([])
+            g3 = self._loadgraph(neg_ind[0])
+            target_neg = self.labels[neg_ind[0]]
+
+            return g1, g2, g3, torch.Tensor([])
+
         target = torch.FloatTensor([0.0]) if target1 == target2 else torch.FloatTensor([1.0])
-        return (node_labels1, am1), (node_labels2, am2), torch.Tensor([]), target
+        return g1, g2, torch.Tensor([]), target
 
     def _loadgraph(self, i):
         graph_dict = pickle.load( open(os.path.join(self.root, self.graphs[i]), "rb") )
-        nl = graph_dict['node_labels']/graph_dict['node_labels'].max()
-        return nl, graph_dict['am']
+
+        g = dgl.DGLGraph()
+
+        g.gdata = {}
+        g.gdata['std'] = torch.tensor(graph_dict['graph_properties']).float()
+
+        g.add_nodes(graph_dict['node_labels'].shape[0])
+        g.ndata['pos'] = torch.tensor(graph_dict['node_labels']).float()
+        if g.number_of_nodes() == 0:
+            g.add_nodes(1, {'pos': torch.zeros(1,2)})
+            g.gdata['std'] = torch.zeros(2)
+
+
+        g.add_edges(graph_dict['am'][0], graph_dict['am'][1])
+
+        # Add self connections
+        g.add_edges(g.nodes(), g.nodes())
+
+        return g
 
     def __len__(self):
         return len(self.groups)
@@ -68,21 +92,35 @@ class Iam(data.Dataset):
 
         self.unique_labels = np.unique(self.labels)
         self.labels = [np.where(target == self.unique_labels)[0][0] for target in self.labels]
+        self.dataset = 'iam'
 
     def __getitem__(self, index):
         # Graph
-        node_labels, am = self._loadgraph(index)
+        g = self._loadgraph(index)
         target = self.labels[index]
-            
-        return (node_labels, am), target
+
+        return g, target
 
     def __len__(self):
         return len(self.labels)
 
     def _loadgraph(self, i):
         graph_dict = pickle.load( open(os.path.join(self.root, self.graphs[i]), "rb") )
-        nl = graph_dict['node_labels']/graph_dict['node_labels'].max()
-        return nl, graph_dict['am']
+
+        g = dgl.DGLGraph()
+
+        g.gdata = {}
+        g.gdata['std'] = torch.tensor(graph_dict['graph_properties']).float()
+
+        g.add_nodes(graph_dict['node_labels'].shape[0])
+        g.ndata['pos'] = torch.tensor(graph_dict['node_labels']).float()
+        if g.number_of_nodes() == 0:
+            g.add_nodes(1, {'pos': torch.zeros(1,2)})
+            g.gdata['std'] = torch.zeros(2)
+
+        g.add_edges(graph_dict['am'][0], graph_dict['am'][1])
+
+        return g
 
 
 def getFileList(file_path):
@@ -136,9 +174,14 @@ def create_graph_iam (file):
 
         row = np.append(row, t)
         col = np.append(col,s)
-    
+
     data = np.ones(row.shape)
 
     am = row, col, data
-    return node_label, am
+    # No properties are provided
+    node_label = node_label - node_label.mean(0)
+    graph_properties = node_label.std(0)
+    node_label = node_label / node_label.std(0)
+
+    return graph_properties, node_label, am
 
