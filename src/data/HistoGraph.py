@@ -89,7 +89,7 @@ class HistoGraph_train(data.Dataset):
 
 
 class HistoGraph(data.Dataset):
-    def __init__(self, root_path, file_list, keywords_file=None, dataset='gw'):
+    def __init__(self, root_path, file_list, keywords_file=None, subset='valid'):
         self.root = root_path
         self.file_list = file_list
 
@@ -98,7 +98,7 @@ class HistoGraph(data.Dataset):
         # To pickle
         self.graphs = [g+'.p' for g in self.graphs]
 
-        self.dataset = dataset
+        self.subset = subset
 
         if keywords_file is not None:
             with open(keywords_file, 'r') as f:
@@ -110,7 +110,7 @@ class HistoGraph(data.Dataset):
                 del self.labels[index]
                 del self.graphs[index]
 
-            if 'PAR' in self.root:
+            if ('PAR' in self.root) and ('valid' in subset):
                 u_labels = np.unique(self.labels)
                 for lab in u_labels:
                     idx_del = np.where(lab == np.array(self.labels))[0]

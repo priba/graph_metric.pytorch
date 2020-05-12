@@ -88,12 +88,12 @@ def test(data_loader, gallery_loader, nets, cuda, validation=False):
                 combined_dist_matrix[i] = dist_matrix[ind].min(0).values
 
         # K-NN classifier
-        acc.update(knn_accuracy(combined_dist_matrix, target_gallery, target_combined_query, k=5, dataset=data_loader.dataset.dataset))
+        acc.update(knn_accuracy(combined_dist_matrix, target_gallery, target_combined_query, k=5))
 
         # mAP retrieval
         meanap.update(mean_average_precision(combined_dist_matrix, target_gallery, target_combined_query))
     batch_time.update(time.time()-start)
-    print('* Test Acc {acc.avg:.3f}; mAP {meanap.avg: .5f}; Time x Test {b_time.avg:.3f}'
+    print('* Test Acc {acc.avg:.3f}; mAP {meanap.avg: .5f} Time x Test {b_time.avg:.3f}'
             .format(acc=acc, meanap=meanap, b_time=batch_time))
     return acc, meanap
 

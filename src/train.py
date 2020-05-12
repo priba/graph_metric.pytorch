@@ -163,8 +163,9 @@ def main():
             distNet.load_state_dict(checkpoint['state_dict_dist'])
             print('Best model at epoch {epoch} and acc {acc}%'.format(epoch=checkpoint['epoch'],acc=checkpoint['best_perf']))
 
-    print('***Test***')
+    print('***Valid***')
     test(valid_loader, valid_gallery_loader, [net, distNet], args.cuda)
+    print('***Test***')
     test(test_loader, test_gallery_loader, [net, distNet], args.cuda)
     sys.exit()
 

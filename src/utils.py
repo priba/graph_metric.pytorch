@@ -18,7 +18,7 @@ __email__ = 'priba@cvc.uab.cat'
 
 
 # Evaluation
-def knn_accuracy(dist_matrix, target_gallery, target_query, k=5, dataset='gw'):
+def knn_accuracy(dist_matrix, target_gallery, target_query, k=5):
     # Predict
     _, ind = dist_matrix.sort(1)
     sort_target = target_gallery[ind.cpu()]
