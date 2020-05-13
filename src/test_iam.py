@@ -20,14 +20,15 @@ from models import models, distance
 from data.load_data import load_data
 from loss.contrastive import ContrastiveLoss, TripletLoss
 import dgl
+from sklearn import metrics
 
 __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
 
-def test(data_loader, gallery_loader, nets, cuda, validation=False):
+def test(data_triplet_loader, nets, cuda, data_pair_loader=None):
     batch_time = LogMetric.AverageMeter()
     acc = LogMetric.AverageMeter()
-    meanap = LogMetric.AverageMeter()
+    auc = LogMetric.AverageMeter()
 
     net, distance = nets
 
@@ -40,62 +41,49 @@ def test(data_loader, gallery_loader, nets, cuda, validation=False):
     dist_matrix = []
     start = time.time()
     with torch.no_grad():
-        g_gallery = []
-        target_gallery = []
-        for j, (g, target) in enumerate(gallery_loader):
+        total, correct = 0,0
+        for j, (g1, g2, g3, target) in enumerate(data_triplet_loader):
             if cuda:
-                g.to(torch.device('cuda'))
-                g.gdata['std'] = g.gdata['std'].cuda()
+                g1.to(torch.device('cuda'))
+                g2.to(torch.device('cuda'))
+                g3.to(torch.device('cuda'))
 
             # Output
-            g = net(g)
+            g1 = net(g1)
+            g2 = net(g2)
+            g3 = net(g3)
 
-            target_gallery.append(target)
-            g_gallery.append(g)
+            d_pos = distance(g1, g2, mode='pairs')
+            d_neg = distance(g1, g3, mode='pairs')
+            total += d_pos.shape[0]
+            correct += (d_pos < d_neg).float().sum()
 
-        target_gallery = np.array(np.concatenate(target_gallery))
-        gdata = list(map(lambda g: g.gdata['std'], g_gallery))
-        g_gallery = dgl.batch(g_gallery)
-        g_gallery.gdata = {'std': torch.cat(gdata)}
+        acc.update(correct/total)
 
-        target_query = []
-        for i, (g, target) in enumerate(data_loader):
-            # Prepare input data
-            if cuda:
-                g.to(torch.device('cuda'))
-                g.gdata['std'] = g.gdata['std'].cuda()
+        if data_pair_loader is not None:
+            distances, labels = [], []
+            for j, (g1, g2, _, target) in enumerate(data_pair_loader):
+                if cuda:
+                    g1.to(torch.device('cuda'))
+                    g2.to(torch.device('cuda'))
 
-            # Output
-            g  = net(g)
-            d = distance(g, g_gallery, mode='retrieval')
+                # Output
+                g1 = net(g1)
+                g2 = net(g2)
 
-            dist_matrix.append(d)
-            target_query.append(target)
-
-        dist_matrix = torch.stack(dist_matrix)
-        target_query = np.array(np.concatenate(target_query))
-
-        if validation:
-            target_combined_query = target_query
-            combined_dist_matrix = dist_matrix
-        else:
-            print('* Test No combine mAP {}'.format(mean_average_precision(dist_matrix, target_gallery, target_query)))
-            target_combined_query = np.unique(target_query)
-            combined_dist_matrix = torch.zeros(target_combined_query.shape[0], dist_matrix.shape[1])
-
-            for i, kw in enumerate(target_combined_query):
-                ind = kw == target_query
-                combined_dist_matrix[i] = dist_matrix[ind].min(0).values
-
-        # K-NN classifier
-        acc.update(knn_accuracy(combined_dist_matrix, target_gallery, target_combined_query, k=5))
+                d = distance(g1, g2, mode='pairs')
+                distances.append(d)
+                labels.append(target)
+            similarity = -torch.cat(distances, 0)
+            similarity = (similarity-similarity.min()) / (similarity.max() - similarity.min() + 1e-8)
+            labels = torch.cat(labels, 0)
+            auc.update(metrics.roc_auc_score(labels.cpu(), similarity.cpu()))
 
         # mAP retrieval
-        meanap.update(mean_average_precision(combined_dist_matrix, target_gallery, target_combined_query))
     batch_time.update(time.time()-start)
-    print('* Test Acc {acc.avg:.3f}; mAP {meanap.avg: .5f} Time x Test {b_time.avg:.3f}'
-            .format(acc=acc, meanap=meanap, b_time=batch_time))
-    return acc, meanap
+    print('* Test Acc {acc.avg:.3f}; AUC {auc.avg: .5f} Time x Test {b_time.avg:.3f}'
+            .format(acc=acc, auc=auc, b_time=batch_time))
+    return acc, auc
 
 
 def main():

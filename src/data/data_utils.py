@@ -48,7 +48,7 @@ def collate_fn_multiple_size_siamese(samples):
 
         return batched_graph1, batched_graph2, batched_graph3, None
 
-    graphs1, graphs2, labels = map(list, zip(*samples))
+    graphs1, graphs2, _, labels = map(list, zip(*samples))
 
     gdata = list(map(lambda g: g.gdata['std'], graphs1))
     batched_graph1 = dgl.batch(graphs1)

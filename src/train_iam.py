@@ -20,7 +20,7 @@ from options import Options
 from Logger import LogMetric
 from utils import save_checkpoint, load_checkpoint
 from models import models, distance
-from test_coil import test
+from test_iam import test
 from data.load_data import load_data
 from loss.contrastive import ContrastiveLoss, TripletLoss
 
@@ -94,7 +94,7 @@ def main():
         criterion = ContrastiveLoss(margin=args.margin)
 
     print('Prepare data')
-    train_loader, valid_loader, valid_gallery_loader, test_loader, test_gallery_loader, in_size = load_data(args.dataset, args.data_path, triplet=args.triplet, batch_size=args.batch_size, prefetch=args.prefetch, set_partition=args.set_partition)
+    train_loader, valid_loader, test_pair_loader, test_triplet_loader, in_size = load_data(args.dataset, args.data_path, triplet=args.triplet, batch_size=args.batch_size, prefetch=args.prefetch, set_partition=args.set_partition)
 
     print('Create model')
     net = models.GNN(in_size, args.hidden, args.out_size, dropout=args.dropout)
@@ -130,11 +130,11 @@ def main():
         for epoch in range(start_epoch, args.epochs):
 
             loss_train = train(train_loader, [net, distNet], optimizer, args.cuda, criterion, epoch)
-            acc_valid, map_valid = test(valid_loader, valid_gallery_loader, [net, distNet], args.cuda, validation=True)
+            acc_valid, auc_valid = test(valid_loader, [net, distNet], args.cuda)
 
             # Early-Stop + Save model
-            if map_valid.avg > best_perf:
-                best_perf = map_valid.avg
+            if acc_valid.avg > best_perf:
+                best_perf = acc_valid.avg
                 early_stop_counter = 0
                 if args.save is not None:
                     save_checkpoint({'epoch': epoch + 1, 'state_dict': net.state_dict(), 'state_dict_dist': distNet.state_dict(), 'best_perf': best_perf}, directory=args.save, file_name='checkpoint')
@@ -148,8 +148,7 @@ def main():
             if args.log:
                 # Scalars
                 logger.add_scalar('loss_train', loss_train.avg)
-                logger.add_scalar('acc_valid', acc_valid.avg)
-                logger.add_scalar('map_valid', map_valid.avg)
+                logger.add_scalar('acc_valid', acc_valid.avg.item())
                 logger.add_scalar('learning_rate', scheduler.get_lr()[0])
                 logger.step()
 
@@ -164,9 +163,9 @@ def main():
             print('Best model at epoch {epoch} and acc {acc}%'.format(epoch=checkpoint['epoch'],acc=checkpoint['best_perf']))
 
     print('***Valid***')
-    test(valid_loader, valid_gallery_loader, [net, distNet], args.cuda)
+    test(valid_loader, [net, distNet], args.cuda)
     print('***Test***')
-    test(test_loader, test_gallery_loader, [net, distNet], args.cuda)
+    test(test_triplet_loader, [net, distNet], args.cuda, data_pair_loader=test_pair_loader)
     sys.exit()
 
 if __name__ == '__main__':

@@ -24,21 +24,22 @@ __email__ = "priba@cvc.uab.cat"
 def load_data(dataset, data_path, triplet=False, batch_size=32, prefetch=4, set_partition='cv1'):
 
     if dataset == 'iam':
-        data_train, data_valid, data_test, gallery = load_iam(data_path, triplet)
-        print_statistics(data_train, data_valid, gallery, data_test, gallery)
-        train_loader = DataLoader(data_train, batch_size=batch_size, num_workers=prefetch, collate_fn=du.collate_fn_multiple_size_siamese, shuffle=True)
+        data_train, data_valid, data_test_pair, data_test_triplet = load_iam(data_path, triplet)
 
-        if triplet:
-            batch_size = 6*batch_size
-        else:
-            batch_size = 4*batch_size
+        anchors = np.array([data_train.labels[g[0]] for g in data_train.groups])
+        anchors_counts = [(a==anchors).sum() for a in anchors]
+        anchor_probs = 1/np.array(anchors_counts)
+        train_sampler = torch.utils.data.sampler.WeightedRandomSampler(anchor_probs, 10000, replacement=True)
+
+        train_loader = DataLoader(data_train, batch_size=batch_size, num_workers=prefetch, collate_fn=du.collate_fn_multiple_size_siamese, sampler=train_sampler)
 
         # Load same numbers of graphs that are asked in training
-        valid_loader = DataLoader(data_valid, batch_size=1, collate_fn=du.collate_fn_multiple_size)
-        test_loader = DataLoader(data_test, batch_size=1, collate_fn=du.collate_fn_multiple_size)
-        gallery_loader = DataLoader(gallery, batch_size=batch_size, collate_fn=du.collate_fn_multiple_size, num_workers=prefetch)
+        valid_loader = DataLoader(data_valid, batch_size=batch_size, collate_fn=du.collate_fn_multiple_size_siamese, num_workers=prefetch)
+
+        test_pair_loader = DataLoader(data_test_pair, batch_size=batch_size, collate_fn=du.collate_fn_multiple_size_siamese, num_workers=prefetch)
+        test_triplet_loader = DataLoader(data_test_triplet, batch_size=batch_size, collate_fn=du.collate_fn_multiple_size_siamese, num_workers=prefetch)
         node_size=2
-        return train_loader, valid_loader, gallery_loader, test_loader, gallery_loader, node_size
+        return train_loader, valid_loader, test_pair_loader, test_triplet_loader, node_size
     elif dataset == 'histograph-gw':
         data_train, queries_valid, gallery_valid, queries_test, gallery_test = load_histograph_gw(data_path, triplet, set_partition=set_partition)
         print_statistics(data_train, queries_valid, gallery_valid, queries_test, gallery_test)
@@ -119,13 +120,13 @@ def load_iam(data_path, triplet=False):
     data_train = Iam_train(pickle_dir, os.path.join(data_path, 'train.cxl'), triplet)
 
     if os.path.isfile(os.path.join(data_path, 'validation.cxl')):
-        data_valid = Iam(pickle_dir, os.path.join(data_path, 'validation.cxl'))
+        data_valid = Iam_train(pickle_dir, os.path.join(data_path, 'validation.cxl'), triplet, num_samples=1000)
     else:
-        data_valid = Iam(pickle_dir, os.path.join(data_path, 'valid.cxl'))
+        data_valid = Iam_train(pickle_dir, os.path.join(data_path, 'valid.cxl'), triplet, num_samples=1000)
 
-    data_test = Iam(pickle_dir, os.path.join(data_path, 'test.cxl'))
-    gallery = Iam(pickle_dir, os.path.join(data_path, 'train.cxl'))
-    return data_train, data_valid, data_test, gallery
+    data_test_pair = Iam_train(pickle_dir, os.path.join(data_path, 'test.cxl'), False, num_samples=1000)
+    data_test_triplet = Iam_train(pickle_dir, os.path.join(data_path, 'test.cxl'), True, num_samples=1000)
+    return data_train, data_valid, data_test_pair, data_test_triplet
 
 
 def load_histograph_gw(data_path, triplet=False, set_partition='cv1'):

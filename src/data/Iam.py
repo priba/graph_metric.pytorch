@@ -14,7 +14,7 @@ __email__ = "priba@cvc.uab.cat"
 
 
 class Iam_train(data.Dataset):
-    def __init__(self, root_path, file_list, triplet):
+    def __init__(self, root_path, file_list, triplet, num_samples=None):
         self.root = root_path
         self.file_list = file_list
         self.triplet = triplet
@@ -30,6 +30,25 @@ class Iam_train(data.Dataset):
         else:
             # Siamese all pairs
             self.groups = list(itertools.permutations(range(len(self.labels)), 2))
+
+        if num_samples is not None:
+            np.random.shuffle(self.groups)
+            if self.triplet:
+                self.groups = self.groups[:1000]
+            else:
+                group = []
+                positive, negative = 0, 0
+                for gr in self.groups:
+                    pair_label = self.labels[gr[0]] == self.labels[gr[1]]
+                    if pair_label == 1:
+                        if positive < 500:
+                            group.append(gr)
+                            positive += 1
+                    else:
+                        if negative < 500:
+                            group.append(gr)
+                            negative += 1
+                self.groups = group
 
     def __getitem__(self, index):
         ind = self.groups[index]
@@ -52,7 +71,7 @@ class Iam_train(data.Dataset):
 
             return g1, g2, g3, torch.Tensor([])
 
-        target = torch.FloatTensor([0.0]) if target1 == target2 else torch.FloatTensor([1.0])
+        target = torch.FloatTensor([1.0]) if target1 == target2 else torch.FloatTensor([0.0])
         return g1, g2, torch.Tensor([]), target
 
     def _loadgraph(self, i):
