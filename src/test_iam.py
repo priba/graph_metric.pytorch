@@ -81,7 +81,7 @@ def test(data_triplet_loader, nets, cuda, data_pair_loader=None):
 
         # mAP retrieval
     batch_time.update(time.time()-start)
-    print('* Test Acc {acc.avg:.3f}; AUC {auc.avg: .5f} Time x Test {b_time.avg:.3f}'
+    print('* Test Acc {acc.avg:.5f}; AUC {auc.avg: .5f} Time x Test {b_time.avg:.3f}'
             .format(acc=acc, auc=auc, b_time=batch_time))
     return acc, auc
 
