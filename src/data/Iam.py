@@ -24,6 +24,7 @@ class Iam_train(data.Dataset):
 
         self.unique_labels = np.unique(self.labels)
         self.labels = [np.where(target == self.unique_labels)[0][0] for target in self.labels]
+        self.unique_labels = np.unique(self.labels)
         if self.triplet:
             # Triplet (anchor, positive, negative)
             self.groups = [ (i, j) for i in range(len(self.labels)) for j in np.where(self.labels[i] == self.labels)[0] if i != j ]
@@ -33,21 +34,51 @@ class Iam_train(data.Dataset):
 
         if num_samples is not None:
             np.random.shuffle(self.groups)
+            num_labels = len(self.unique_labels)
+            # Balance positive samples
+            pos_samples = num_samples//2
+            pos_samples_class = pos_samples//num_labels
+            pos_count = np.zeros(self.unique_labels.shape)
+
+            neg_samples = num_samples//2
+            neg_samples_class = 2*neg_samples//num_labels
+            neg_count = np.zeros(self.unique_labels.shape)
+
+            group = []
+
             if self.triplet:
-                self.groups = self.groups[:1000]
+                pos_samples_class *= 2
+                for gr in self.groups:
+                    if pos_count[self.labels[gr[0]] == self.unique_labels] < pos_samples_class:
+                        pos_count[self.labels[gr[0]] == self.unique_labels] += 1
+                        possible_ind = np.where(self.labels!=self.labels[gr[0]])[0]
+                        neg_ind = np.random.choice(possible_ind, 1)[0]
+                        while neg_count[self.labels[neg_ind]] >= neg_samples_class:
+                            possible_ind = np.where(self.labels!=self.labels[gr[0]])[0]
+                            neg_ind = np.random.choice(possible_ind, 1)[0]
+                        neg_count[self.labels[neg_ind]] += 1
+                        group.append((gr[0], gr[1], neg_ind))
+                self.group = group
             else:
-                group = []
-                positive, negative = 0, 0
                 for gr in self.groups:
                     pair_label = self.labels[gr[0]] == self.labels[gr[1]]
-                    if pair_label == 1:
-                        if positive < 500:
+                    if pair_label:
+                        if pos_count[self.labels[gr[0]] == self.unique_labels] < pos_samples_class:
+                            pos_count[self.labels[gr[0]] == self.unique_labels] += 1
                             group.append(gr)
-                            positive += 1
                     else:
-                        if negative < 500:
+                        if (neg_count[self.labels[gr[0]] == self.unique_labels] < neg_samples_class) and (neg_count[self.labels[gr[1]] == self.unique_labels] < neg_samples_class):
+                            neg_count[self.labels[gr[0]] == self.unique_labels] += 1
+                            neg_count[self.labels[gr[1]] == self.unique_labels] += 1
                             group.append(gr)
-                            negative += 1
+                if len(group)<num_samples:
+                    for gr in self.groups:
+                        if len(group)==num_samples:
+                            break
+                        if (neg_count[self.labels[gr[0]] == self.unique_labels] < neg_samples_class) or (neg_count[self.labels[gr[1]] == self.unique_labels] < neg_samples_class):
+                            neg_count[self.labels[gr[0]] == self.unique_labels] += 1
+                            neg_count[self.labels[gr[1]] == self.unique_labels] += 1
+                            group.append(gr)
                 self.groups = group
 
     def __getitem__(self, index):
@@ -62,12 +93,15 @@ class Iam_train(data.Dataset):
         target2 = self.labels[ind[1]]
 
         if self.triplet:
-            possible_ind = np.where(self.labels!=target1)[0]
-            neg_ind = np.random.choice(possible_ind, 1)
+            if len(ind)==3:
+                neg_ind = ind[2]
+            else:
+                possible_ind = np.where(self.labels!=target1)[0]
+                neg_ind = np.random.choice(possible_ind, 1)[0]
 
             # Graph 3
-            g3 = self._loadgraph(neg_ind[0])
-            target_neg = self.labels[neg_ind[0]]
+            g3 = self._loadgraph(neg_ind)
+            target_neg = self.labels[neg_ind]
 
             return g1, g2, g3, torch.Tensor([])
 
