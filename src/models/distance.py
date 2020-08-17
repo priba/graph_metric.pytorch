@@ -52,8 +52,6 @@ class SoftHd(nn.Module):
         feature_dist = self.cdist(h1, h2).pow(2.).sum(-1)
         dist_matrix = (spatial_dist + feature_dist) / 2
 
-#        dist_matrix = spatial_dist + feature_dist
-
         d1 = 0.5 + self.node_ins_del_cost(h1).abs().squeeze()
         d2 = 0.5 + self.node_ins_del_cost(h2).abs().squeeze()
 

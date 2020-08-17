@@ -29,7 +29,7 @@ def load_data(dataset, data_path, triplet=False, batch_size=32, prefetch=4, set_
         anchors = np.array([data_train.labels[g[0]] for g in data_train.groups])
         anchors_counts = [(a==anchors).sum() for a in anchors]
         anchor_probs = 1/np.array(anchors_counts)
-        train_sampler = torch.utils.data.sampler.WeightedRandomSampler(anchor_probs, 10000, replacement=True)
+        train_sampler = torch.utils.data.sampler.WeightedRandomSampler(anchor_probs, 100000, replacement=True)
 
         train_loader = DataLoader(data_train, batch_size=batch_size, num_workers=prefetch, collate_fn=du.collate_fn_multiple_size_siamese, sampler=train_sampler)
 
