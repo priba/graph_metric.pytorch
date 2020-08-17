@@ -5,12 +5,16 @@ Graph Metric Learning in PyTorch.
 ## Install
 
 - Install all the requirements. 
-    $ conda env create -f environment.yml
 
+```
+    $ conda env create -f environment.yml
+```
 
 ## Usage
 
+```
     $ conda activate graphmetric
+```
 
 ### Train
 
@@ -21,11 +25,6 @@ Graph Metric Learning in PyTorch.
 
 * Write configuration file. Follow the example [here](./config/) providing a load path (`--load`).
 * Run the test script with the corresponding configuration file `./test.sh config/test.cfg`
-
-### Tensorboard
-
-* Setup your server running the script with the corresponding path `./board.sh ./checkpoints/`
-* Go to your [tensorboard page](localhost:6006) using your browser.
 
 ## Author
 
