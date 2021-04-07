@@ -82,9 +82,10 @@ class SoftHd(nn.Module):
         '''
 
         g1_list = dgl.unbatch(g1)
-        for i, g in enumerate(g1_list):
-            g.gdata = {}
-            g.gdata['std'] = g1.gdata['std'][i]
+        if len(g1_list) > 1:
+            for i, g in enumerate(g1_list):
+                g.gdata = {}
+                g.gdata['std'] = g1.gdata['std'][i]
 
         g2_list = dgl.unbatch(g2)
         for i, g in enumerate(g2_list):

@@ -23,8 +23,8 @@ Graph Metric Learning in PyTorch.
 
 ### Test
 
-* Write configuration file. Follow the example [here](./config/) providing a load path (`--load`).
-* Run the test script with the corresponding configuration file `./test.sh config/test.cfg`
+* Write configuration file. Follow the example [here](./config/) providing a load path (`--load`), and test option (`-t`).
+* Run the test script with the corresponding configuration file `./train.sh config/test.cfg`
 
 ## Author
 

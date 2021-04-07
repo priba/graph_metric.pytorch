@@ -16,6 +16,7 @@ import re
 from tqdm import tqdm
 import _pickle as pickle
 import sys
+from statistics import median
 
 __author__ = "Pau Riba"
 __email__ = "priba@cvc.uab.cat"
@@ -101,6 +102,22 @@ def print_statistics(data_train, data_valid, gallery_valid, data_test, gallery_t
     print('* Train with {} groups of graphs'.format(len(data_train)))
     print('* Validation with {} queries and {} graphs in the gallery'.format(len(data_valid), len(gallery_valid)))
     print('* Test with {} queries and {} graphs in the gallery'.format(len(data_test), len(gallery_test)))
+    print('Test Queries')
+    nodes, edges = [], []
+    for batch in data_test:
+        g = batch[0]
+        nodes.append(g.number_of_nodes())
+        edges.append(g.number_of_edges())
+    print(f'* Nodes {sum(nodes)/len(nodes)}, median {median(nodes)}')
+    print(f'* Edges {sum(edges)/len(edges)}, median {median(edges)}')
+    print('Test Gallery')
+    nodes, edges = [], []
+    for batch in gallery_test:
+        g = batch[0]
+        nodes.append(g.number_of_nodes())
+        edges.append(g.number_of_edges())
+    print(f'* Nodes {sum(nodes)/len(nodes)}, median {median(nodes)}')
+    print(f'* Edges {sum(edges)/len(edges)}, median {median(edges)}')
 
 
 def load_iam(data_path, triplet=False):

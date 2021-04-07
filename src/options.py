@@ -19,6 +19,7 @@ class Options():
         parser.add_argument('dataset', type=str, choices=['iam', 'histograph-gw', 'histograph-ak'], help='Dataset.')
         parser.add_argument('data_path', type=str, help='Dataset root path.')
         # Model parameters
+        parser.add_argument('--model', type=str, default='GAT', help='Model to use GAT or GRU', choices=['GAT', 'GRU'])
         parser.add_argument('--set_partition', type=str, help='Dataset set partition (Only histograph-gw otherwise it is ignored).', default='cv1')
         parser.add_argument('--batch_size', '-bz', type=int, default=64, help='Batch Size.')
         parser.add_argument('--out_size', type=int, default=32, help='Node Embedding size.')

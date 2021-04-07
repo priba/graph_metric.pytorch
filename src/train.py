@@ -97,7 +97,11 @@ def main():
     train_loader, valid_loader, valid_gallery_loader, test_loader, test_gallery_loader, in_size = load_data(args.dataset, args.data_path, triplet=args.triplet, batch_size=args.batch_size, prefetch=args.prefetch, set_partition=args.set_partition)
 
     print('Create model')
-    net = models.GNN(in_size, args.hidden, args.out_size, dropout=args.dropout)
+    if args.model == 'GAT':
+        net = models.GNN_GAT(in_size, args.hidden, args.out_size, dropout=args.dropout)
+    elif args.model == 'GRU':
+        net = models.GNN_GRU(in_size, args.hidden, args.out_size, dropout=args.dropout)
+
     distNet = distance.SoftHd(args.out_size)
 
     optimizer = torch.optim.Adam(list(net.parameters())+list(distNet.parameters()), args.learning_rate, weight_decay=args.decay)
